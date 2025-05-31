@@ -1,9 +1,11 @@
 from datetime import date, datetime
 import re
 from typing import Iterator
+from uuid import uuid4
 from zoneinfo import ZoneInfo
 from bs4 import BeautifulSoup
 import requests
+from src.models.cinema import CinemaSummary
 from src.common import web_utils
 from src.models.region import Region
 from src.models.movie import Movie
@@ -11,6 +13,7 @@ from src.models.movie import Movie
 MOVIES_URL_TEMPLATE = '{host}/now-playing/{region_slug}'
 MOVIE_DETAILS_URL_TEMPLATE = '{host}/movie/{movie_slug}'
 MOVIE_SHOWTIMES_URL_TEMPLATE = '{host}/movie/times/{movie_slug}/{region_slug}'
+MOVIE_VENUES_URL_TEMPLATE = '{host}/movie/sessions/{movie_slug}/{showtime}/region/'
 
 # now showing page
 MOVIE_CLASS_SELECTOR = 'movie-list-carousel-item__heading'
@@ -24,7 +27,10 @@ MOVIE_SHOWTIMES_SELECTOR = 'times-calendar__el-grouper'
 MOVIE_SHOWTIME_DAY_SELECTOR = 'times-calendar__el__date'
 MOVIE_SHOWTIME_MONTH_SELECTOR = 'times-calendar__el__month'
 
-def scrape_sessions(region: Region, host: str) -> list[Movie] | None: 
+#movie bookings page
+MOVIE_VENUES_SELECTOR = 'movie-times__cinema__copy'
+
+def scrape_sessions(region: Region, host: str, cinemas: dict[str, str]) -> list[Movie] | None: 
     http_session = requests.Session()   
     now_showing_url = MOVIES_URL_TEMPLATE.format(host=host, region_slug=region.slug)
     now_showing_html = web_utils.fetch_html_stateful(session=http_session, url=now_showing_url)
@@ -40,7 +46,15 @@ def scrape_sessions(region: Region, host: str) -> list[Movie] | None:
         movie_showtimes_url = MOVIE_SHOWTIMES_URL_TEMPLATE.format(host=host, movie_slug=movie['slug'], region_slug=region.slug)
         movie_showtimes_html = web_utils.fetch_html(movie_showtimes_url)
         movie_showtimes = _parse_movie_showtimes(movie_showtimes_html)
-        print(f"{movie['title']}: {movie['slug']}, {movie_details['release_year']}, {movie_details['image_url']}, {movie_showtimes}")
+
+        formatted_first_showtime = movie_showtimes[0]
+        movie_venues_url = MOVIE_VENUES_URL_TEMPLATE.format(host=host, movie_slug=movie['slug'], showtime=formatted_first_showtime)
+        movie_venues_html = web_utils.fetch_html_stateful(session=http_session, url=movie_venues_url)
+        movie_venues = _parse_movie_venues(movie_venues_html, cinemas)
+
+        movies.append(Movie(id=str(uuid4()), title=movie['title'], release_year=movie_details['release_year'], image_url=movie_details['image_url'], region=region.name, cinemas=movie_venues, showtimes=movie_showtimes))
+        return movies
+
     
 def _parse_now_showing_movies(html: str) -> Iterator[dict]:
     seen_titles = set()
@@ -68,7 +82,7 @@ def _parse_movie_details(html: str) -> dict:
         'image_url': movie_image_url
     }
 
-def _parse_movie_showtimes(html: str) -> list[date]:
+def _parse_movie_showtimes(html: str) -> list[str]:
     movie_showtimes_soup = BeautifulSoup(html, 'lxml')
     showtimes_elements = movie_showtimes_soup.find_all('span', MOVIE_SHOWTIMES_SELECTOR)
     showtimes = []
@@ -79,16 +93,26 @@ def _parse_movie_showtimes(html: str) -> list[date]:
 
     return showtimes
 
+def _parse_movie_venues(html: str, cinemas: dict[str, str]) -> list[CinemaSummary]:
+    movie_venues_soup = BeautifulSoup(html, 'lxml')
+    venues_elements = movie_venues_soup.find_all('div', MOVIE_VENUES_SELECTOR)
+    venues = []
+    for venue_element in venues_elements:
+        venue_name = venue_element.find('h4').text
+        venue_homepage_url = cinemas[venue_name]
+        venues.append(CinemaSummary(name=venue_name, homepage_url=venue_homepage_url))
+
+    return venues
+
 def _clean_movie_title(title: str) -> str:
     # removes trailing year from some movies eg. (2014), (2014-15)
     return re.sub(r'\s*\((\d{4}(?:-\d{2,4})?)\)$', '', title)
 
-def _parse_date(day: str, month: str, now: date):
-    day_int = int(day)
-    month_int = datetime.strptime(month, "%b").month
-    date_parsed = date(now.year, month_int, day_int)
-    
-    if date_parsed < now:
-        date_parsed = date(now.year + 1, month_int, day_int)
+def _parse_date(day: str, month: str, now: date) -> str:
+    month_num = datetime.strptime(month, "%b").month
+    year = now.year
 
-    return date_parsed
+    if month_num < now.month:
+        year += 1
+    
+    return f"{year}-{month_num:02d}-{int(day):02d}"

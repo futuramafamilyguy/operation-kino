@@ -1,5 +1,8 @@
 from datetime import date
-from src.session_scraper.scraper import _clean_movie_title, _parse_date, _parse_movie_details, _parse_movie_showtimes, _parse_now_showing_movies
+
+from pydantic import HttpUrl
+from src.models.cinema import CinemaSummary
+from src.session_scraper.scraper import _clean_movie_title, _parse_date, _parse_movie_details, _parse_movie_showtimes, _parse_movie_venues, _parse_now_showing_movies
 from tests.test_utils import load_html_fixture
 
 
@@ -49,14 +52,37 @@ def test_parse_movie_details():
 
 def test_parse_movie_showtimes():
     expected_showtimes = [
-        (5, 31),
-        (6, 1)
+        {
+            'day': '31',
+            'month': '05'
+        },
+        {
+            'day': '01',
+            'month': '06'
+        }
     ]
     html = load_html_fixture('movie_showtimes.html')
 
-    actual_showtimes = [(d.month, d.day) for d in _parse_movie_showtimes(html)]
+    actual_showtimes = [{'day':d.split('-')[2], 'month':d.split('-')[1]} for d in _parse_movie_showtimes(html)]
 
     assert actual_showtimes == expected_showtimes
+
+
+# _parse_movie_venues
+
+def test_parse_movie_venues():
+    expected_venues = [
+        CinemaSummary(name='Maya Cinemas', homepage_url=HttpUrl('https://www.mayacinemas.com/salinas')),
+        CinemaSummary(name='Lighthouse Cinemas', homepage_url=None)
+    ]
+    existing_cinemas: dict[str, str | None] = {}
+    existing_cinemas['Maya Cinemas'] = 'https://www.mayacinemas.com/salinas'
+    existing_cinemas['Lighthouse Cinemas'] = None
+    html = load_html_fixture('movie_venues.html')
+
+    actual_venues = _parse_movie_venues(html, existing_cinemas)
+
+    assert actual_venues == expected_venues
 
 
 # _clean_movie_title
@@ -89,7 +115,7 @@ def test_clean_movie_title_no_year():
 # _parse_date
 
 def test_parse_date():
-    expected_date = date(2024, 12, 31)
+    expected_date = '2024-12-31'
     now = date(2024, 12, 30)
 
     actual_date = _parse_date('31', 'Dec', now)
@@ -97,7 +123,7 @@ def test_parse_date():
     assert actual_date == expected_date
 
 def test_parse_date_rollover():
-    expected_date = date(2025, 1, 1)
+    expected_date = '2025-01-01'
     now = date(2024, 12, 30)
 
     actual_date = _parse_date('1', 'Jan', now)
