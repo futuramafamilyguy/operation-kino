@@ -1,4 +1,5 @@
-from src.session_scraper.scraper import _clean_movie_title, _parse_movie_details, _parse_now_showing_movies
+from datetime import date
+from src.session_scraper.scraper import _clean_movie_title, _parse_date, _parse_movie_details, _parse_movie_showtimes, _parse_now_showing_movies
 from tests.test_utils import load_html_fixture
 
 
@@ -44,6 +45,20 @@ def test_parse_movie_details():
     assert actual_details == expected_details
 
 
+# _parse_movie_showtimes
+
+def test_parse_movie_showtimes():
+    expected_showtimes = [
+        (5, 31),
+        (6, 1)
+    ]
+    html = load_html_fixture('movie_showtimes.html')
+
+    actual_showtimes = [(d.month, d.day) for d in _parse_movie_showtimes(html)]
+
+    assert actual_showtimes == expected_showtimes
+
+
 # _clean_movie_title
 
 def test_clean_movie_title_with_year():
@@ -69,3 +84,22 @@ def test_clean_movie_title_no_year():
     actual_title = _clean_movie_title(original_title)
 
     assert actual_title == expected_title
+
+
+# _parse_date
+
+def test_parse_date():
+    expected_date = date(2024, 12, 31)
+    now = date(2024, 12, 30)
+
+    actual_date = _parse_date('31', 'Dec', now)
+
+    assert actual_date == expected_date
+
+def test_parse_date_rollover():
+    expected_date = date(2025, 1, 1)
+    now = date(2024, 12, 30)
+
+    actual_date = _parse_date('1', 'Jan', now)
+
+    assert actual_date == expected_date
