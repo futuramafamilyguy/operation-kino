@@ -1,4 +1,4 @@
-from src.session_scraper.scraper import _clean_movie_title, _parse_now_showing_movies
+from src.session_scraper.scraper import _clean_movie_title, _parse_movie_details, _parse_now_showing_movies
 from tests.test_utils import load_html_fixture
 
 
@@ -28,6 +28,20 @@ def test_parse_now_showing_no_movies():
     actual_movies = list(_parse_now_showing_movies(html))
 
     assert actual_movies == expected_movies
+
+
+# _parse_movie_details
+
+def test_parse_movie_details():
+    expected_details = {
+        'release_year': 1982,
+        'image_url': 'img-store.com/cannery-row.jpg'
+    }
+    html = load_html_fixture('movie_details.html')
+
+    actual_details = _parse_movie_details(html)
+
+    assert actual_details == expected_details
 
 
 # _clean_movie_title
