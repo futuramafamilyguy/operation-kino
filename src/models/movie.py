@@ -1,7 +1,7 @@
 from typing import List, Optional
 from pydantic import BaseModel, HttpUrl
 
-from src.models.cinema import CinemaSummary
+from models.cinema import CinemaSummary
 
 
 class Movie(BaseModel):

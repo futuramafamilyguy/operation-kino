@@ -4,9 +4,9 @@ from bs4 import BeautifulSoup
 from uuid import uuid4
 import validators
 
-from src.common import web_utils
-from src.models.cinema import Cinema
-from src.models.region import Region
+from common import web_utils
+from models.cinema import Cinema
+from models.region import Region
 
 
 CINEMAS_URL_TEMPLATE = '{host}/cinemas/{region_slug}/'

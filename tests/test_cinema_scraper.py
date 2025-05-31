@@ -1,6 +1,6 @@
 from pydantic import HttpUrl
-from src.cinema_scraper.scraper import _enrich_cinema_with_url, _parse_cinema_listings
-from tests.test_utils import load_html_fixture
+from cinema_scraper.scraper import _enrich_cinema_with_url, _parse_cinema_listings
+from test_utils import load_html_fixture
 
 
 def test_parse_cinema_listings():

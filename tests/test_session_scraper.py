@@ -1,9 +1,9 @@
 from datetime import date
 
 from pydantic import HttpUrl
-from src.models.cinema import CinemaSummary
-from src.session_scraper.scraper import _clean_movie_title, _parse_date, _parse_movie_details, _parse_movie_showtimes, _parse_movie_venues, _parse_now_showing_movies
-from tests.test_utils import load_html_fixture
+from models.cinema import CinemaSummary
+from session_scraper.scraper import _clean_movie_title, _parse_date, _parse_movie_details, _parse_movie_showtimes, _parse_movie_venues, _parse_now_showing_movies
+from test_utils import load_html_fixture
 
 
 # _parse_now_showing_movies

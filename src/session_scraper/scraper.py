@@ -5,10 +5,10 @@ from uuid import uuid4
 from zoneinfo import ZoneInfo
 from bs4 import BeautifulSoup
 import requests
-from src.models.cinema import CinemaSummary
-from src.common import web_utils
-from src.models.region import Region
-from src.models.movie import Movie
+from models.cinema import CinemaSummary
+from common import web_utils
+from models.region import Region
+from models.movie import Movie
 
 MOVIES_URL_TEMPLATE = '{host}/now-playing/{region_slug}'
 MOVIE_DETAILS_URL_TEMPLATE = '{host}/movie/{movie_slug}'

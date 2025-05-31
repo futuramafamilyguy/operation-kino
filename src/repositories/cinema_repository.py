@@ -1,6 +1,6 @@
 from boto3.dynamodb.conditions import Key
 
-from src.models.cinema import Cinema
+from models.cinema import Cinema
 
 
 def get_cinemas_by_region(table, region: str) -> list[Cinema]:
