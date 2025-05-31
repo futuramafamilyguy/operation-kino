@@ -33,22 +33,21 @@ def scrape_cinemas(region: Region, host: str) -> list[Cinema] | None:
 
 def _parse_cinema_listings(html: str) -> Iterator[dict]:
     cinemas_soup = BeautifulSoup(html, 'lxml')
-    for cinema_soup in cinemas_soup.find_all('a', class_=CINEMA_CLASS_SELECTOR):
-        cinema_name = cinema_soup.find('h2', class_=CINEMA_TITLE_CLASS_SELECTOR).text
-        cinema_slug = cinema_soup.get('href').strip('/').split('/')[1]
+    for cinema_element in cinemas_soup.find_all('a', class_=CINEMA_CLASS_SELECTOR):
+        cinema_name = cinema_element.find('h2', class_=CINEMA_TITLE_CLASS_SELECTOR).text
+        cinema_slug = cinema_element.get('href').strip('/').split('/')[1]
         yield {
             'name': cinema_name,
             'slug': cinema_slug
         }
     
 def _enrich_cinema_with_url(cinema_name: str, region_name: str, html: str) -> Cinema:
-    
     if (html is None):
         return Cinema(id=str(uuid4()), name=cinema_name, homepage_url=None, region=region_name)
 
     cinema_details_soup = BeautifulSoup(html, 'lxml')
-    cinema_details = cinema_details_soup.find('ul', class_=CINEMA_DETAILS_CLASS_SELECTOR)
-    cinema_url = cinema_details.find('a').text
+    cinema_details_element = cinema_details_soup.find('ul', class_=CINEMA_DETAILS_CLASS_SELECTOR)
+    cinema_url = cinema_details_element.find('a').text
     if (not validators.url(cinema_url)): # sometimes the url is a phone number wtf brisbane??
         cinema_url = None
 
