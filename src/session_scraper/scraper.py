@@ -4,8 +4,9 @@ from typing import Iterator
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 from bs4 import BeautifulSoup
+from pydantic import HttpUrl
 import requests
-from models.cinema import CinemaSummary
+from models.cinema import Cinema, CinemaSummary
 from common import web_utils
 from models.region import Region
 from models.movie import Movie
@@ -32,7 +33,7 @@ MOVIE_VENUES_SELECTOR = 'movie-times__cinema__copy'
 
 
 def scrape_sessions(
-    region: Region, host: str, cinemas: dict[str, str]
+    region: Region, host: str, cinemas: list[Cinema]
 ) -> list[Movie] | None:
     http_session = requests.Session()
     now_showing_url = MOVIES_URL_TEMPLATE.format(host=host, region_slug=region.slug)
@@ -65,7 +66,8 @@ def scrape_sessions(
         movie_venues_html = web_utils.fetch_html_stateful(
             session=http_session, url=movie_venues_url
         )
-        movie_venues = _parse_movie_venues(movie_venues_html, cinemas)
+        cinemas_map = {cinema.name: cinema.homepage_url for cinema in cinemas}
+        movie_venues = _parse_movie_venues(movie_venues_html, cinemas_map)
 
         movies.append(
             Movie(
@@ -127,14 +129,23 @@ def _parse_movie_showtimes(html: str) -> list[str]:
     return showtimes
 
 
-def _parse_movie_venues(html: str, cinemas: dict[str, str]) -> list[CinemaSummary]:
+def _parse_movie_venues(
+    html: str, cinemas: dict[str, HttpUrl | None]
+) -> list[CinemaSummary]:
     movie_venues_soup = BeautifulSoup(html, 'lxml')
     venues_elements = movie_venues_soup.find_all('div', MOVIE_VENUES_SELECTOR)
     venues = []
     for venue_element in venues_elements:
         venue_name = venue_element.find('h4').text
         venue_homepage_url = cinemas[venue_name]
-        venues.append(CinemaSummary(name=venue_name, homepage_url=venue_homepage_url))
+        venues.append(
+            CinemaSummary(
+                name=venue_name,
+                homepage_url=str(venue_homepage_url)
+                if venue_homepage_url is not None
+                else None,
+            )
+        )
 
     return venues
 

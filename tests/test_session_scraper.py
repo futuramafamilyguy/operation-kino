@@ -74,12 +74,12 @@ def test_parse_movie_venues():
     expected_venues = [
         CinemaSummary(
             name='Maya Cinemas',
-            homepage_url=HttpUrl('https://www.mayacinemas.com/salinas'),
+            homepage_url='https://www.mayacinemas.com/salinas',
         ),
         CinemaSummary(name='Lighthouse Cinemas', homepage_url=None),
     ]
-    existing_cinemas: dict[str, str | None] = {}
-    existing_cinemas['Maya Cinemas'] = 'https://www.mayacinemas.com/salinas'
+    existing_cinemas: dict[str, HttpUrl | None] = {}
+    existing_cinemas['Maya Cinemas'] = HttpUrl('https://www.mayacinemas.com/salinas')
     existing_cinemas['Lighthouse Cinemas'] = None
     html = load_html_fixture('movie_venues.html')
 

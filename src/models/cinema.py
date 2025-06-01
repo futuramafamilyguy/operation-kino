@@ -11,4 +11,6 @@ class Cinema(BaseModel):
 
 class CinemaSummary(BaseModel):
     name: str
-    homepage_url: Optional[HttpUrl]
+    homepage_url: Optional[
+        str
+    ]  # skip validation because it's derived from Cinema.homepage_url
