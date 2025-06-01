@@ -18,9 +18,10 @@ def lambda_handler(event, context):
     dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
     cinemas_table = dynamodb.Table('Cinemas')
 
+    delete_cinemas_by_region(cinemas_table, region_name)
+
     region = Region(name=region_name, slug=region_slug)
     cinemas = scrape_cinemas(region, host)
-    delete_cinemas_by_region(cinemas_table, region_name)
     batch_insert_cinemas(cinemas_table, cinemas)
 
     return {'statusCode': 200}
