@@ -1,2 +1,5 @@
 [tool.pytest.ini_options]
 python_paths=['src']
+
+[tool.ruff.format]
+quote-style = 'single'

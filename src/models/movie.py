@@ -12,4 +12,3 @@ class Movie(BaseModel):
     region: str
     cinemas: List[CinemaSummary]
     showtimes: List[str]
-    

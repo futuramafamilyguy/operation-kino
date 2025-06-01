@@ -5,20 +5,15 @@ from test_utils import load_html_fixture
 
 def test_parse_cinema_listings():
     expected_cinemas = [
-        {
-            'name': 'Maya Cinemas',
-            'slug': 'maya-cinemas'
-        },
-        {
-            'name': 'Lighthouse Cinemas',
-            'slug': 'lighthouse-cinemas'
-        },
+        {'name': 'Maya Cinemas', 'slug': 'maya-cinemas'},
+        {'name': 'Lighthouse Cinemas', 'slug': 'lighthouse-cinemas'},
     ]
     html = load_html_fixture('cinemas.html')
 
     actual_cinemas = list(_parse_cinema_listings(html))
 
     assert actual_cinemas == expected_cinemas
+
 
 def test_parse_cinema_listings_no_cinemas():
     expected_cinemas = []
@@ -27,6 +22,7 @@ def test_parse_cinema_listings_no_cinemas():
     actual_cinemas = list(_parse_cinema_listings(html))
 
     assert actual_cinemas == expected_cinemas
+
 
 def test_enrich_cinema_with_url():
     cinema_name = 'Maya Cinemas'
@@ -38,6 +34,7 @@ def test_enrich_cinema_with_url():
     assert cinema.name == cinema_name
     assert cinema.homepage_url == HttpUrl('https://www.mayacinemas.com/salinas')
     assert cinema.region == cinema_region
+
 
 def test_enrich_cinema_with_url_no_url():
     cinema_name = 'Lighthouse Cinemas'
