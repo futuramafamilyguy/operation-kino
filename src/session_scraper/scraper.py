@@ -59,9 +59,12 @@ def scrape_sessions(
         movie_showtimes_html = web_utils.fetch_html(movie_showtimes_url)
         movie_showtimes = _parse_movie_showtimes(movie_showtimes_html)
 
-        formatted_first_showtime = movie_showtimes[0]
+        # sometimes movies are present in now-playing even if they have no showtimes
+        if len(movie_showtimes) == 0:
+            continue
+        earliest_showtime = movie_showtimes[0]
         movie_venues_url = MOVIE_VENUES_URL_TEMPLATE.format(
-            host=host, movie_slug=movie['slug'], showtime=formatted_first_showtime
+            host=host, movie_slug=movie['slug'], showtime=earliest_showtime
         )
         movie_venues_html = web_utils.fetch_html_stateful(
             session=http_session, url=movie_venues_url
@@ -80,7 +83,8 @@ def scrape_sessions(
                 showtimes=movie_showtimes,
             )
         )
-        return movies
+
+    return movies
 
 
 def _parse_now_showing_movies(html: str) -> Iterator[dict]:
