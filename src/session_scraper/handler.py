@@ -1,3 +1,4 @@
+import asyncio
 import boto3
 from models.region import Region
 from repositories.cinema_repository import get_cinemas_by_region
@@ -22,7 +23,7 @@ def lambda_handler(event, context):
     cinemas = get_cinemas_by_region(cinemas_table, region_name)
 
     region = Region(name=region_name, slug=region_slug)
-    movies = scrape_sessions(region, host, cinemas)
+    movies = asyncio.run(scrape_sessions(region, host, cinemas))
     batch_insert_movies(movies_table, movies)
 
     return {'statusCode': 200}

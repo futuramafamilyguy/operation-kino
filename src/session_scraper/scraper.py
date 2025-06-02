@@ -1,11 +1,12 @@
+import asyncio
 from datetime import date, datetime
 import re
-from typing import Iterator
+from typing import Iterator, Optional
 from uuid import uuid4
 from zoneinfo import ZoneInfo
+import aiohttp
 from bs4 import BeautifulSoup
 from pydantic import HttpUrl
-import requests
 from models.cinema import Cinema, CinemaSummary
 from common import web_utils
 from models.region import Region
@@ -32,59 +33,76 @@ MOVIE_SHOWTIME_MONTH_SELECTOR = 'times-calendar__el__month'
 MOVIE_VENUES_SELECTOR = 'movie-times__cinema__copy'
 
 
-def scrape_sessions(
+async def scrape_sessions(
     region: Region, host: str, cinemas: list[Cinema]
 ) -> list[Movie] | None:
-    http_session = requests.Session()
-    now_showing_url = MOVIES_URL_TEMPLATE.format(host=host, region_slug=region.slug)
-    now_showing_html = web_utils.fetch_html_stateful(
-        session=http_session, url=now_showing_url
-    )
-    if now_showing_html is None:
-        return None
+    async with aiohttp.ClientSession() as http_session:
+        now_showing_url = MOVIES_URL_TEMPLATE.format(host=host, region_slug=region.slug)
+        now_showing_html = await web_utils.fetch_html(
+            session=http_session, url=now_showing_url
+        )
+        if now_showing_html is None:
+            return None
 
-    movies = []
-    for movie in _parse_now_showing_movies(now_showing_html):
-        movie_details_url = MOVIE_DETAILS_URL_TEMPLATE.format(
-            host=host, movie_slug=movie['slug']
-        )
-        movie_details_html = web_utils.fetch_html_stateful(
-            session=http_session, url=movie_details_url
-        )
-        movie_details = _parse_movie_details(movie_details_html)
+        async def fetch_movie_details(movie_slug: str) -> dict:
+            movie_details_url = MOVIE_DETAILS_URL_TEMPLATE.format(
+                host=host, movie_slug=movie_slug
+            )
+            movie_details_html = await web_utils.fetch_html(
+                session=http_session, url=movie_details_url
+            )
+            return _parse_movie_details(movie_details_html)
 
-        movie_showtimes_url = MOVIE_SHOWTIMES_URL_TEMPLATE.format(
-            host=host, movie_slug=movie['slug'], region_slug=region.slug
-        )
-        movie_showtimes_html = web_utils.fetch_html(movie_showtimes_url)
-        movie_showtimes = _parse_movie_showtimes(movie_showtimes_html)
+        async def fetch_movie_showtimes(movie_slug: str) -> list[str]:
+            movie_showtimes_url = MOVIE_SHOWTIMES_URL_TEMPLATE.format(
+                host=host, movie_slug=movie_slug, region_slug=region.slug
+            )
+            movie_showtimes_html = await web_utils.fetch_html(
+                session=http_session, url=movie_showtimes_url
+            )
+            return _parse_movie_showtimes(movie_showtimes_html)
 
-        # sometimes movies are present in now-playing even if they have no showtimes
-        if len(movie_showtimes) == 0:
-            continue
-        earliest_showtime = movie_showtimes[0]
-        movie_venues_url = MOVIE_VENUES_URL_TEMPLATE.format(
-            host=host, movie_slug=movie['slug'], showtime=earliest_showtime
-        )
-        movie_venues_html = web_utils.fetch_html_stateful(
-            session=http_session, url=movie_venues_url
-        )
-        cinemas_map = {cinema.name: cinema.homepage_url for cinema in cinemas}
-        movie_venues = _parse_movie_venues(movie_venues_html, cinemas_map)
+        async def fetch_movie_venues(movie_slug: str, showtime: str) -> list[str]:
+            movie_venues_url = MOVIE_VENUES_URL_TEMPLATE.format(
+                host=host, movie_slug=movie_slug, showtime=showtime
+            )
+            movie_venues_html = await web_utils.fetch_html(
+                session=http_session, url=movie_venues_url
+            )
+            cinemas_map = {cinema.name: cinema.homepage_url for cinema in cinemas}
+            return _parse_movie_venues(movie_venues_html, cinemas_map)
 
-        movies.append(
-            Movie(
+        async def fetch_and_enrich_movie(movie: dict) -> Optional[Movie]:
+            fetch_details_task = fetch_movie_details(movie['slug'])
+            fetch_showtimes_task = fetch_movie_showtimes(movie['slug'])
+            details, showtimes = await asyncio.gather(
+                fetch_details_task, fetch_showtimes_task
+            )
+            if len(showtimes) == 0:
+                return None
+
+            earliest_showtime = showtimes[0]
+            venues = await fetch_movie_venues(movie['slug'], earliest_showtime)
+
+            return Movie(
                 id=str(uuid4()),
                 title=movie['title'],
-                release_year=movie_details['release_year'],
-                image_url=movie_details['image_url'],
+                release_year=details['release_year'],
+                image_url=details['image_url'],
                 region=region.name,
-                cinemas=movie_venues,
-                showtimes=movie_showtimes,
+                cinemas=venues,
+                showtimes=showtimes,
             )
-        )
 
-    return movies
+        parsed_movies = _parse_now_showing_movies(now_showing_html)
+        tasks = [fetch_and_enrich_movie(parsed_movie) for parsed_movie in parsed_movies]
+        enriched_movies = await asyncio.gather(*tasks)
+
+        return [
+            enriched_movie
+            for enriched_movie in enriched_movies
+            if enriched_movie is not None
+        ]
 
 
 def _parse_now_showing_movies(html: str) -> Iterator[dict]:
