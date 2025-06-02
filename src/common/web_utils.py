@@ -1,21 +1,16 @@
-import requests
+import asyncio
+from typing import Optional
+import aiohttp
 
 
-def fetch_html(url: str, headers: dict = None, timeout=10) -> str | None:
+async def fetch_html(
+    session: aiohttp.ClientSession, url: str, headers: dict = None, timeout=10
+) -> Optional[str]:
     try:
-        response = requests.get(url, headers=headers or {}, timeout=timeout)
-        response.raise_for_status()
-        return response.text
-    except requests.RequestException as e:
-        return None
-
-
-def fetch_html_stateful(
-    session: requests.Session, url: str, headers: dict = None, timeout=10
-) -> str | None:
-    try:
-        response = session.get(url, headers=headers or {}, timeout=timeout)
-        response.raise_for_status()
-        return response.text
-    except requests.RequestException as e:
+        async with session.get(
+            url, headers=headers or {}, timeout=aiohttp.ClientTimeout(total=timeout)
+        ) as response:
+            response.raise_for_status()
+            return await response.text()
+    except (aiohttp.ClientError, asyncio.TimeoutError):
         return None

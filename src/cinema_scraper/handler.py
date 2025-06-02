@@ -1,3 +1,4 @@
+import asyncio
 import boto3
 from repositories.cinema_repository import (
     batch_insert_cinemas,
@@ -21,7 +22,7 @@ def lambda_handler(event, context):
     delete_cinemas_by_region(cinemas_table, region_name)
 
     region = Region(name=region_name, slug=region_slug)
-    cinemas = scrape_cinemas(region, host)
+    cinemas = asyncio.run(scrape_cinemas(region, host))
     batch_insert_cinemas(cinemas_table, cinemas)
 
     return {'statusCode': 200}

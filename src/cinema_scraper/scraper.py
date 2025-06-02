@@ -1,5 +1,7 @@
+import asyncio
 from typing import Iterator
 
+import aiohttp
 from bs4 import BeautifulSoup
 from uuid import uuid4
 import validators
@@ -17,24 +19,30 @@ CINEMA_TITLE_CLASS_SELECTOR = 'more-cinemas__title'
 CINEMA_DETAILS_CLASS_SELECTOR = 'cinema-info__block'
 
 
-def scrape_cinemas(region: Region, host: str) -> list[Cinema] | None:
-    cinemas_url = CINEMAS_URL_TEMPLATE.format(host=host, region_slug=region.slug)
-    cinemas_html = web_utils.fetch_html(cinemas_url)
-    if cinemas_html is None:
-        return None
+async def scrape_cinemas(region: Region, host: str) -> list[Cinema] | None:
+    async with aiohttp.ClientSession() as session:
+        cinemas_url = CINEMAS_URL_TEMPLATE.format(host=host, region_slug=region.slug)
+        cinemas_html = await web_utils.fetch_html(session, cinemas_url)
+        if cinemas_html is None:
+            return None
 
-    cinemas = []
-    for cinema in _parse_cinema_listings(cinemas_html):
-        cinema_details_url = CINEMA_DETAILS_URL_TEMPLATE.format(
-            host=host, cinema_slug=cinema['slug']
-        )
-        cinema_details_html = web_utils.fetch_html(cinema_details_url)
-        cinema_enriched = _enrich_cinema_with_url(
-            cinema['name'], region.name, cinema_details_html
-        )
-        cinemas.append(cinema_enriched)
+        async def fetch_and_enrich_cinema(cinema: dict):
+            cinema_details_url = CINEMA_DETAILS_URL_TEMPLATE.format(
+                host=host, cinema_slug=cinema['slug']
+            )
+            cinema_details_html = await web_utils.fetch_html(
+                session, cinema_details_url
+            )
+            return _enrich_cinema_with_url(
+                cinema['name'], region.name, cinema_details_html
+            )
 
-    return cinemas
+        parsed_cinemas = _parse_cinema_listings(cinemas_html)
+        enriched_cinemas = await asyncio.gather(
+            *[fetch_and_enrich_cinema(cinema) for cinema in parsed_cinemas]
+        )
+
+        return enriched_cinemas
 
 
 def _parse_cinema_listings(html: str) -> Iterator[dict]:
