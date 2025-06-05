@@ -1,5 +1,6 @@
 import asyncio
 from datetime import date, datetime
+import logging
 import re
 from typing import Iterator, Optional
 from uuid import uuid4
@@ -7,6 +8,7 @@ from zoneinfo import ZoneInfo
 import aiohttp
 from bs4 import BeautifulSoup
 from pydantic import HttpUrl
+from exceptions import ScrapingException
 from models.cinema import Cinema, CinemaSummary
 from common import web_utils
 from models.region import Region
@@ -32,6 +34,8 @@ MOVIE_SHOWTIME_MONTH_SELECTOR = 'times-calendar__el__month'
 # movie bookings page
 MOVIE_VENUES_SELECTOR = 'movie-times__cinema__copy'
 
+logger = logging.getLogger(__name__)
+
 
 async def scrape_sessions(
     region: Region, host: str, cinemas: list[Cinema]
@@ -42,9 +46,10 @@ async def scrape_sessions(
             session=http_session, url=now_showing_url
         )
         if now_showing_html is None:
+            logger.error(f'{now_showing_url} did not return anything')
             return None
 
-        async def fetch_movie_details(movie_slug: str) -> dict:
+        async def _fetch_movie_details(movie_slug: str) -> dict:
             movie_details_url = MOVIE_DETAILS_URL_TEMPLATE.format(
                 host=host, movie_slug=movie_slug
             )
@@ -53,7 +58,7 @@ async def scrape_sessions(
             )
             return _parse_movie_details(movie_details_html)
 
-        async def fetch_movie_showtimes(movie_slug: str) -> list[str]:
+        async def _fetch_movie_showtimes(movie_slug: str) -> list[str]:
             movie_showtimes_url = MOVIE_SHOWTIMES_URL_TEMPLATE.format(
                 host=host, movie_slug=movie_slug, region_slug=region.slug
             )
@@ -62,7 +67,7 @@ async def scrape_sessions(
             )
             return _parse_movie_showtimes(movie_showtimes_html)
 
-        async def fetch_movie_venues(movie_slug: str, showtime: str) -> list[str]:
+        async def _fetch_movie_venues(movie_slug: str, showtime: str) -> list[str]:
             movie_venues_url = MOVIE_VENUES_URL_TEMPLATE.format(
                 host=host, movie_slug=movie_slug, showtime=showtime
             )
@@ -72,32 +77,53 @@ async def scrape_sessions(
             cinemas_map = {cinema.name: cinema.homepage_url for cinema in cinemas}
             return _parse_movie_venues(movie_venues_html, cinemas_map)
 
-        async def fetch_and_enrich_movie(movie: dict) -> Optional[Movie]:
-            fetch_details_task = fetch_movie_details(movie['slug'])
-            fetch_showtimes_task = fetch_movie_showtimes(movie['slug'])
-            details, showtimes = await asyncio.gather(
-                fetch_details_task, fetch_showtimes_task
-            )
-            if len(showtimes) == 0:
+        async def _fetch_and_enrich_movie(movie: dict) -> Optional[Movie]:
+            try:
+                fetch_details_task = _fetch_movie_details(movie['slug'])
+                fetch_showtimes_task = _fetch_movie_showtimes(movie['slug'])
+                details, showtimes = await asyncio.gather(
+                    fetch_details_task, fetch_showtimes_task
+                )
+                if not showtimes:
+                    logger.error(
+                        f'failed to scrape showtimes for movie {movie["title"]}'
+                    )
+                    raise ScrapingException('movie showtime scraping failed')
+
+                earliest_showtime = showtimes[0]
+                venues = await _fetch_movie_venues(movie['slug'], earliest_showtime)
+                if not venues:
+                    logger.error(f'failed to scrape venues for movie {movie["title"]}')
+                    raise ScrapingException('movie venue scraping failed')
+
+                return Movie(
+                    id=str(uuid4()),
+                    title=movie['title'],
+                    release_year=details['release_year'],
+                    image_url=details['image_url'],
+                    region=region.name,
+                    cinemas=venues,
+                    showtimes=showtimes,
+                )
+            except ScrapingException:
+                logger.warning(
+                    f'skipping movie due to scraping failure: {movie["title"]}'
+                )
                 return None
 
-            earliest_showtime = showtimes[0]
-            venues = await fetch_movie_venues(movie['slug'], earliest_showtime)
-
-            return Movie(
-                id=str(uuid4()),
-                title=movie['title'],
-                release_year=details['release_year'],
-                image_url=details['image_url'],
-                region=region.name,
-                cinemas=venues,
-                showtimes=showtimes,
-            )
-
         parsed_movies = _parse_now_showing_movies(now_showing_html)
-        tasks = [fetch_and_enrich_movie(parsed_movie) for parsed_movie in parsed_movies]
-        enriched_movies = await asyncio.gather(*tasks)
+        try:
+            tasks = [
+                _fetch_and_enrich_movie(parsed_movie) for parsed_movie in parsed_movies
+            ]
+        except ScrapingException:
+            logger.error(
+                f'could not find any movies in now showing page at: {now_showing_url}'
+            )
+            logger.debug(f'now showing page: {now_showing_html}')
+            return []
 
+        enriched_movies = await asyncio.gather(*tasks)
         return [
             enriched_movie
             for enriched_movie in enriched_movies
@@ -108,27 +134,72 @@ async def scrape_sessions(
 def _parse_now_showing_movies(html: str) -> Iterator[dict]:
     seen_titles = set()
     now_showing_soup = BeautifulSoup(html, 'lxml')
-    for movie_element in now_showing_soup.find_all('h3', class_=MOVIE_CLASS_SELECTOR):
+    movie_elements = now_showing_soup.find_all('h3', class_=MOVIE_CLASS_SELECTOR)
+    if not movie_elements:
+        raise ScrapingException('now playing movies scraping failed')
+
+    for movie_element in movie_elements:
         movie_anchor = movie_element.find('a')
+
+        # scrape movie title
+        if movie_anchor is None or movie_anchor.text is None:
+            logger.error(
+                f'could not find <a> element for movie title in: {movie_element}'
+            )
+            continue
         movie_title = _clean_movie_title(movie_anchor.text)
         if movie_title in seen_titles:
             continue
         seen_titles.add(movie_title)
 
-        movie_slug = movie_anchor.get('href').strip('/').split('/')[1]
-        yield {'title': movie_title, 'slug': movie_slug}
+        # scrape movie slug
+        movie_slug_href = movie_anchor.get('href')
+        if movie_slug_href is None:
+            logger.error(f'could not find <a[href]> for movie slug in {movie_anchor}')
+            continue
+        movie_slug_parts = movie_slug_href.strip('/').split('/')
+        if len(movie_slug_parts) != 2:
+            logger.error(
+                f'unexpected format for movie slug. expected: </movie/movie-title> actual: <{movie_slug_href}>'
+            )
+            continue
+
+        yield {'title': movie_title, 'slug': movie_slug_parts[1]}
 
 
 def _parse_movie_details(html: str) -> dict:
     movie_details_soup = BeautifulSoup(html, 'lxml')
-    movie_release_year = movie_details_soup.find(
-        'div', MOVIE_RELEASE_YEAR_SELECTOR
-    ).text
-    movie_image_url = movie_details_soup.find('div', MOVIE_IMAGE_URL_SELECTOR).find(
-        'img'
-    )['src']
 
-    return {'release_year': int(movie_release_year), 'image_url': movie_image_url}
+    # scrape movie release year
+    movie_release_year_element = movie_details_soup.find(
+        'div', MOVIE_RELEASE_YEAR_SELECTOR
+    )
+    if movie_release_year_element is None:
+        logger.error(
+            f'could not find <div.{MOVIE_RELEASE_YEAR_SELECTOR}> for movie release year in movie details page'
+        )
+        logger.debug(f'movie details page: {movie_details_soup}')
+        raise ScrapingException('movie detail (release year) scraping failed')
+
+    # scrape movie image url
+    movie_image_url_div = movie_details_soup.find('div', MOVIE_IMAGE_URL_SELECTOR)
+    if movie_image_url_div is None:
+        logger.error(
+            f'could not find <div.{MOVIE_IMAGE_URL_SELECTOR}> for movie image url in movie details page'
+        )
+        logger.debug(f'movie details page: {movie_details_soup}')
+        raise ScrapingException('movie detail (image url) scraping failed')
+    movie_image_url_img = movie_image_url_div.find('img')
+    if movie_image_url_img is None:
+        logger.error(
+            f'could not find <img> for movie image url in: {movie_image_url_div}'
+        )
+        raise ScrapingException('movie detail (image url) scraping failed')
+
+    return {
+        'release_year': int(movie_release_year_element.text),
+        'image_url': movie_image_url_img['src'],
+    }
 
 
 def _parse_movie_showtimes(html: str) -> list[str]:
@@ -136,14 +207,28 @@ def _parse_movie_showtimes(html: str) -> list[str]:
     showtimes_elements = movie_showtimes_soup.find_all('span', MOVIE_SHOWTIMES_SELECTOR)
     showtimes = []
     for showtime_element in showtimes_elements:
-        showtime_day = showtime_element.find('span', MOVIE_SHOWTIME_DAY_SELECTOR).text
-        showtime_month = showtime_element.find(
+        # scrape showtime day
+        showtime_day_span = showtime_element.find('span', MOVIE_SHOWTIME_DAY_SELECTOR)
+        if showtime_day_span is None:
+            logger.error(
+                f'could not find <span.{MOVIE_SHOWTIME_DAY_SELECTOR}> for showtime day in: {showtime_element}'
+            )
+            continue
+
+        # scrape showtime month
+        showtime_month_span = showtime_element.find(
             'span', MOVIE_SHOWTIME_MONTH_SELECTOR
-        ).text
+        )
+        if showtime_month_span is None:
+            logger.error(
+                f'could not find <span.{MOVIE_SHOWTIME_MONTH_SELECTOR}> for showtime month in: {showtime_element}'
+            )
+            continue
+
         showtimes.append(
             _parse_date(
-                showtime_day,
-                showtime_month,
+                showtime_day_span.text,
+                showtime_month_span.text,
                 datetime.now(ZoneInfo('Pacific/Auckland')).date(),
             )
         )
@@ -152,13 +237,19 @@ def _parse_movie_showtimes(html: str) -> list[str]:
 
 
 def _parse_movie_venues(
-    html: str, cinemas: dict[str, HttpUrl | None]
+    html: str, cinemas: dict[str, Optional[HttpUrl]]
 ) -> list[CinemaSummary]:
     movie_venues_soup = BeautifulSoup(html, 'lxml')
     venues_elements = movie_venues_soup.find_all('div', MOVIE_VENUES_SELECTOR)
     venues = []
     for venue_element in venues_elements:
-        venue_name = venue_element.find('h4').text
+        venue_name_h4 = venue_element.find('h4')
+        if venue_name_h4 is None:
+            logger.error(
+                f'could not find <h4> for movie venue name in: {venue_element}'
+            )
+            continue
+        venue_name = venue_name_h4.text
         venue_homepage_url = cinemas[venue_name]
         venues.append(
             CinemaSummary(

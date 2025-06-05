@@ -9,7 +9,8 @@ from repositories.cinema_repository import (
 from cinema_scraper.scraper import scrape_cinemas
 from models.region import Region
 
-logging.basicConfig(level=logging.INFO)
+LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()
+logging.basicConfig(level=LOG_LEVEL)
 logger = logging.getLogger(__name__)
 
 
@@ -48,7 +49,7 @@ def lambda_handler(event, context):
                 'body': f'cinema scraping successful but encountered dynamodb error: {e}',
             }
 
-        logger.info(f'operation kino phase 1: cinema scraper complete <{region_name}>')
+        logger.info(f'operation kino phase 1: cinema scraper complete ({region_name})')
 
         return {'statusCode': 200}
     except Exception as e:
