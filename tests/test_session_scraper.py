@@ -1,6 +1,8 @@
 from datetime import date
 
 from pydantic import HttpUrl
+import pytest
+from exceptions import ScrapingException
 from models.cinema import CinemaSummary
 from session_scraper.scraper import (
     _clean_movie_title,
@@ -29,12 +31,10 @@ def test_parse_now_showing_movies():
 
 
 def test_parse_now_showing_no_movies():
-    expected_movies = []
     html = load_html_fixture('now_showing_no_movies.html')
 
-    actual_movies = list(_parse_now_showing_movies(html))
-
-    assert actual_movies == expected_movies
+    with pytest.raises(ScrapingException):
+        list(_parse_now_showing_movies(html))
 
 
 # _parse_movie_details

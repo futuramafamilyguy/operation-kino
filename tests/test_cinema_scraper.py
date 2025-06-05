@@ -1,5 +1,7 @@
 from pydantic import HttpUrl
+import pytest
 from cinema_scraper.scraper import _enrich_cinema_with_url, _parse_cinema_listings
+from exceptions import ScrapingException
 from test_utils import load_html_fixture
 
 
@@ -16,12 +18,10 @@ def test_parse_cinema_listings():
 
 
 def test_parse_cinema_listings_no_cinemas():
-    expected_cinemas = []
     html = load_html_fixture('no_cinemas.html')
 
-    actual_cinemas = list(_parse_cinema_listings(html))
-
-    assert actual_cinemas == expected_cinemas
+    with pytest.raises(ScrapingException):
+        list(_parse_cinema_listings(html))
 
 
 def test_enrich_cinema_with_url():
