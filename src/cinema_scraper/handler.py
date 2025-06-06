@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 import boto3
 from botocore.exceptions import ClientError, BotoCoreError
 from repositories.cinema_repository import (
