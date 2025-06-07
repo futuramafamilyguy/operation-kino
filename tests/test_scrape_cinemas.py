@@ -1,6 +1,6 @@
 from pydantic import HttpUrl
 import pytest
-from cinema_scraper.scraper import _enrich_cinema_with_url, _parse_cinema_listings
+from scrape_cinemas.scraper import _enrich_cinema_with_url, _parse_cinema_listings
 from exceptions import ScrapingException
 from test_utils import load_html_fixture
 

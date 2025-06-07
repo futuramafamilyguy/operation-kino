@@ -7,7 +7,7 @@ from repositories.cinema_repository import (
     batch_insert_cinemas,
     delete_cinemas_by_region,
 )
-from cinema_scraper.scraper import scrape_cinemas
+from scrape_cinemas.scraper import scrape_cinemas
 from models.region import Region
 
 LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()

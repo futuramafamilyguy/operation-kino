@@ -4,7 +4,7 @@ from pydantic import HttpUrl
 import pytest
 from exceptions import ScrapingException
 from models.cinema import CinemaSummary
-from session_scraper.scraper import (
+from scrape_sessions.scraper import (
     _clean_movie_title,
     _parse_date,
     _parse_movie_details,

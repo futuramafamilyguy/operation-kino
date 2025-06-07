@@ -6,7 +6,7 @@ from botocore.exceptions import ClientError, BotoCoreError
 from models.region import Region
 from repositories.cinema_repository import get_cinemas_by_region
 from repositories.movie_repository import batch_insert_movies, delete_movies_by_region
-from session_scraper.scraper import scrape_sessions
+from scrape_sessions.scraper import scrape_sessions
 
 LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()
 logging.basicConfig(level=LOG_LEVEL)

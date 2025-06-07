@@ -13,7 +13,7 @@ provider "aws" {
     region = "ap-southeast-2"
 }
 
-resource "aws_dynamodb_table" "cinemas" {
+resource "aws_dynamodb_table" "cinema_table" {
     name         = "operationkino_cinemas"
     billing_mode = "PAY_PER_REQUEST"
     
@@ -31,7 +31,7 @@ resource "aws_dynamodb_table" "cinemas" {
     }
 }
 
-resource "aws_dynamodb_table" "movies" {
+resource "aws_dynamodb_table" "movie_table" {
     name         = "operationkino_movies"
     billing_mode = "PAY_PER_REQUEST"
     

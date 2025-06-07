@@ -9,7 +9,8 @@ BASE_DIR = Path(__file__).parent.resolve()
 SRC_DIR = BASE_DIR / 'src'
 BUILD_DIR = BASE_DIR / 'build'
 
-SCRAPER_LAMBDAS = ['cinema_scraper', 'session_scraper']
+OPERATION_KINO = 'operationkino'
+SCRAPER_LAMBDAS = ['scrape_cinemas', 'scrape_sessions']
 
 
 def package_scraper_lambdas():
@@ -63,7 +64,7 @@ def package_scraper_lambdas():
         shutil.copy(lambda_src / 'handler.py', temp_dir / 'handler.py')
 
         BUILD_DIR.mkdir(exist_ok=True)
-        zip_path = BUILD_DIR / f'{_lambda}.zip'
+        zip_path = BUILD_DIR / f'{OPERATION_KINO}-{_lambda}.zip'
         zip_directory(temp_dir, zip_path)
         print(f'created {zip_path}')
 
