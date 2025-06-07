@@ -29,7 +29,7 @@ def lambda_handler(event, context):
 
     try:
         dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
-        cinemas_table = dynamodb.Table('Cinemas')
+        cinemas_table = dynamodb.Table('operationkino_cinemas')
 
         region = Region(name=region_name, slug=region_slug)
         cinemas = asyncio.run(scrape_cinemas(region, host))
@@ -50,7 +50,7 @@ def lambda_handler(event, context):
                 'body': f'cinema scraping successful but encountered dynamodb error: {e}',
             }
 
-        logger.info(f'operation kino phase 1: cinema scraper complete ({region_name})')
+        logger.info(f'operation kino phase 1: cinema scraper complete <{region_name}>')
 
         return {'statusCode': 200}
     except Exception as e:
