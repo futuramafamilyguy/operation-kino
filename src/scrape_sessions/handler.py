@@ -26,8 +26,8 @@ def lambda_handler(event, context):
     try:
         dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
 
-        movies_table = dynamodb.Table('operationkino_movies')
-        cinemas_table = dynamodb.Table('operationkino_cinemas')
+        movies_table = dynamodb.Table('operation-kino_movies')
+        cinemas_table = dynamodb.Table('operation-kino_cinemas')
         cinemas = get_cinemas_by_region(cinemas_table, region_name)
         if not cinemas:
             return {
