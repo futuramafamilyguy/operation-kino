@@ -9,7 +9,7 @@ BASE_DIR = Path(__file__).parent.resolve()
 SRC_DIR = BASE_DIR / 'src'
 BUILD_DIR = BASE_DIR / 'build'
 
-SCRAPER_LAMBDAS = ['cinema_scraper', 'session_scraper']
+SCRAPER_LAMBDAS = ['scrape_cinemas', 'scrape_sessions']
 
 
 def package_scraper_lambdas():
@@ -23,20 +23,7 @@ def package_scraper_lambdas():
     print('packaging scraper common')
 
     requirements = BASE_DIR / 'requirements.txt'
-    subprocess.run(
-        [
-            'pip',
-            'install',
-            '-r',
-            str(requirements),
-            '-t',
-            str(temp_dir),
-            '--platform',
-            'manylinux2014_x86_64',
-            '--only-binary=:all:',
-        ],
-        check=True,
-    )
+    install_dependencies(requirements, temp_dir)
 
     for item in os.listdir(SRC_DIR):
         if item not in SCRAPER_LAMBDAS:
@@ -70,6 +57,60 @@ def package_scraper_lambdas():
     shutil.rmtree(temp_dir)
 
 
+def package_get_sessions_lambda():
+    _lambda = 'get_sessions'
+    temp_dir = BASE_DIR / '.build_temp'
+    if temp_dir.exists():
+        shutil.rmtree(temp_dir)
+    temp_dir.mkdir(parents=True)
+
+    print(f'installing dependencies for {_lambda}')
+
+    requirements = SRC_DIR / _lambda / 'requirements.txt'
+    install_dependencies(requirements, temp_dir)
+
+    print(f'packaging {_lambda}')
+
+    files_to_copy = [
+        (
+            SRC_DIR / 'repositories' / 'movie_repository.py',
+            temp_dir / 'repositories' / 'movie_repository.py',
+        ),
+        (SRC_DIR / 'models' / 'movie.py', temp_dir / 'models' / 'movie.py'),
+        (SRC_DIR / 'models' / 'cinema.py', temp_dir / 'models' / 'cinema.py'),
+    ]
+    for src, dest in files_to_copy:
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(src, dest)
+
+    lambda_src = SRC_DIR / _lambda
+    shutil.copy(lambda_src / 'handler.py', temp_dir / 'handler.py')
+    BUILD_DIR.mkdir(exist_ok=True)
+    zip_path = BUILD_DIR / f'{_lambda}.zip'
+    zip_directory(temp_dir, zip_path)
+
+    print(f'created {zip_path}')
+
+    shutil.rmtree(temp_dir)
+
+
+def install_dependencies(requirements: str, dest: str):
+    subprocess.run(
+        [
+            'pip',
+            'install',
+            '-r',
+            str(requirements),
+            '-t',
+            str(dest),
+            '--platform',
+            'manylinux2014_x86_64',
+            '--only-binary=:all:',
+        ],
+        check=True,
+    )
+
+
 def zip_directory(source_dir: Path, zip_path: Path):
     with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
         for file_path in source_dir.rglob('*'):
@@ -87,6 +128,7 @@ def clear_scraper_modules(temp_dir):
 
 def main():
     package_scraper_lambdas()
+    package_get_sessions_lambda()
 
 
 if __name__ == '__main__':
