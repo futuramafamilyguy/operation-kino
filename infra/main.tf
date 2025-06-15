@@ -1,16 +1,16 @@
 terraform {
-    required_providers {
-        aws = {
-        source  = "hashicorp/aws"
-        version = "~> 5.92"
-        }
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.92"
     }
+  }
 
-    required_version = ">= 1.12.0, < 2.0.0"
+  required_version = ">= 1.12.0, < 2.0.0"
 }
 
 provider "aws" {
-    region = "ap-southeast-2"
+  region = "ap-southeast-2"
 }
 
 locals {
@@ -19,39 +19,39 @@ locals {
 }
 
 resource "aws_dynamodb_table" "cinemas" {
-    name         = "${local.application}_cinemas"
-    billing_mode = "PAY_PER_REQUEST"
-    
-    hash_key  = "region"
-    range_key = "id"
+  name         = "${local.application}_cinemas"
+  billing_mode = "PAY_PER_REQUEST"
 
-    attribute {
-        name = "region"
-        type = "S"
-    }
+  hash_key  = "region"
+  range_key = "id"
 
-    attribute {
-        name = "id"
-        type = "S"
-    }
+  attribute {
+    name = "region"
+    type = "S"
+  }
+
+  attribute {
+    name = "id"
+    type = "S"
+  }
 }
 
 resource "aws_dynamodb_table" "movies" {
-    name         = "${local.application}_movies"
-    billing_mode = "PAY_PER_REQUEST"
-    
-    hash_key  = "region"
-    range_key = "id"
+  name         = "${local.application}_movies"
+  billing_mode = "PAY_PER_REQUEST"
 
-    attribute {
-        name = "region"
-        type = "S"
-    }
+  hash_key  = "region"
+  range_key = "id"
 
-    attribute {
-        name = "id"
-        type = "S"
-    }
+  attribute {
+    name = "region"
+    type = "S"
+  }
+
+  attribute {
+    name = "id"
+    type = "S"
+  }
 }
 
 data "aws_iam_policy_document" "dynamodb_access_policy" {
@@ -104,16 +104,16 @@ resource "aws_iam_role_policy_attachment" "lambda_basic" {
 }
 
 resource "aws_lambda_function" "scrape_cinemas" {
-  function_name    = "${local.application}_scrape_cinemas"
+  function_name = "${local.application}_scrape_cinemas"
 
-  role             = aws_iam_role.lambda_exec.arn
-  handler          = "handler.lambda_handler"
-  runtime          = "python3.12"
-  memory_size      = 256
-  timeout          = 30
+  role        = aws_iam_role.lambda_exec.arn
+  handler     = "handler.lambda_handler"
+  runtime     = "python3.12"
+  memory_size = 256
+  timeout     = 30
 
-  s3_bucket        = local.artifacts_bucket
-  s3_key           = "${local.application}/scrape_cinemas.zip"
+  s3_bucket = local.artifacts_bucket
+  s3_key    = "${local.application}/scrape_cinemas.zip"
 
   source_code_hash = filebase64sha256("../build/scrape_cinemas.zip")
 
@@ -126,16 +126,16 @@ resource "aws_lambda_function" "scrape_cinemas" {
 }
 
 resource "aws_lambda_function" "scrape_sessions" {
-  function_name    = "${local.application}_scrape_sessions"
+  function_name = "${local.application}_scrape_sessions"
 
-  role             = aws_iam_role.lambda_exec.arn
-  handler          = "handler.lambda_handler"
-  runtime          = "python3.12"
-  memory_size      = 512
-  timeout          = 60
+  role        = aws_iam_role.lambda_exec.arn
+  handler     = "handler.lambda_handler"
+  runtime     = "python3.12"
+  memory_size = 512
+  timeout     = 60
 
-  s3_bucket        = local.artifacts_bucket
-  s3_key           = "${local.application}/scrape_sessions.zip"
+  s3_bucket = local.artifacts_bucket
+  s3_key    = "${local.application}/scrape_sessions.zip"
 
   source_code_hash = filebase64sha256("../build/scrape_sessions.zip")
 
@@ -148,16 +148,16 @@ resource "aws_lambda_function" "scrape_sessions" {
 }
 
 resource "aws_lambda_function" "get_sessions" {
-  function_name    = "${local.application}_get_sessions"
+  function_name = "${local.application}_get_sessions"
 
-  role             = aws_iam_role.lambda_exec.arn
-  handler          = "handler.lambda_handler"
-  runtime          = "python3.12"
-  memory_size      = 128
-  timeout          = 15
+  role        = aws_iam_role.lambda_exec.arn
+  handler     = "handler.lambda_handler"
+  runtime     = "python3.12"
+  memory_size = 128
+  timeout     = 15
 
-  s3_bucket        = local.artifacts_bucket
-  s3_key           = "${local.application}/get_sessions.zip"
+  s3_bucket = local.artifacts_bucket
+  s3_key    = "${local.application}/get_sessions.zip"
 
   source_code_hash = filebase64sha256("../build/get_sessions.zip")
 }
