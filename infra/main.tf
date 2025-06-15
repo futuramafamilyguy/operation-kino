@@ -109,13 +109,20 @@ resource "aws_lambda_function" "scrape_cinemas" {
   role             = aws_iam_role.lambda_exec.arn
   handler          = "handler.lambda_handler"
   runtime          = "python3.12"
-  memory_size      = 128
+  memory_size      = 256
   timeout          = 30
 
   s3_bucket        = local.artifacts_bucket
   s3_key           = "${local.application}/scrape_cinemas.zip"
 
   source_code_hash = filebase64sha256("../build/scrape_cinemas.zip")
+
+  environment {
+    variables = {
+      SCRAPE_HOST_NZ = var.scrape_host_nz
+      SCRAPE_HOST_AU = var.scrape_host_au
+    }
+  }
 }
 
 resource "aws_lambda_function" "scrape_sessions" {
@@ -124,13 +131,20 @@ resource "aws_lambda_function" "scrape_sessions" {
   role             = aws_iam_role.lambda_exec.arn
   handler          = "handler.lambda_handler"
   runtime          = "python3.12"
-  memory_size      = 258
+  memory_size      = 512
   timeout          = 60
 
   s3_bucket        = local.artifacts_bucket
   s3_key           = "${local.application}/scrape_sessions.zip"
 
   source_code_hash = filebase64sha256("../build/scrape_sessions.zip")
+
+  environment {
+    variables = {
+      SCRAPE_HOST_NZ = var.scrape_host_nz
+      SCRAPE_HOST_AU = var.scrape_host_au
+    }
+  }
 }
 
 resource "aws_lambda_function" "get_sessions" {

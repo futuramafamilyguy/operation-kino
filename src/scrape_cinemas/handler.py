@@ -18,13 +18,19 @@ logger = logging.getLogger(__name__)
 def lambda_handler(event, context):
     region_name = event.get('region_name')
     region_slug = event.get('region_slug')
-    host = event.get('host')
+    country_code = event.get('country_code')
+    if not region_name or not region_slug or not country_code:
+        return {'statusCode': 400, 'body': 'missing region info'}
 
-    if not region_name or not region_slug or not host:
-        return {'statusCode': 400, 'body': 'missing region or host'}
+    host = os.getenv(f'SCRAPE_HOST_{country_code}').upper()
+    if not host:
+        return {
+            'statusCode': 400,
+            'body': f'country code not supported: <{country_code}>',
+        }
 
     logger.info(
-        f'operation kino phase 1: cinema scraper begin <{region_name}>. for king and country'
+        f'operation kino phase 1: scrape cinemas begin <{region_name}>. for king and country'
     )
 
     try:
@@ -47,14 +53,14 @@ def lambda_handler(event, context):
         except (ClientError, BotoCoreError) as e:
             return {
                 'statusCode': 500,
-                'body': f'cinema scraping successful but encountered dynamodb error: {e}',
+                'body': f'scrape cinemas successful but encountered dynamodb error: {e}',
             }
 
-        logger.info(f'operation kino phase 1: cinema scraper complete <{region_name}>')
+        logger.info(f'operation kino phase 1: scrape cinemas complete <{region_name}>')
 
         return {'statusCode': 200}
     except Exception as e:
         return {
             'statusCode': 500,
-            'body': f'cinema scraper lambda encountered unexpected error: {e}',
+            'body': f'scrape cinemas lambda encountered unexpected error: {e}',
         }

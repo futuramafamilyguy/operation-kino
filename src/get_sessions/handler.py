@@ -27,7 +27,8 @@ def lambda_handler(event, context):
             logger.warning(f'no sessions found for <{region_name}>')
 
         sessions_json = [
-            json.loads(session.model_dump_json(exclude={'id', 'region'})) for session in sessions
+            json.loads(session.model_dump_json(exclude={'id', 'region'}))
+            for session in sessions
         ]
 
         return {

@@ -16,12 +16,18 @@ logger = logging.getLogger(__name__)
 def lambda_handler(event, context):
     region_name = event.get('region_name')
     region_slug = event.get('region_slug')
-    host = event.get('host')
+    country_code = event.get('country_code')
+    if not region_name or not region_slug or not country_code:
+        return {'statusCode': 400, 'body': 'missing region info'}
 
-    logger.info(f'operation kino phase 2: session scraper begin <{region_name}>')
+    host = os.getenv(f'SCRAPE_HOST_{country_code}').upper()
+    if not host:
+        return {
+            'statusCode': 400,
+            'body': f'country code not supported: <{country_code}>',
+        }
 
-    if not region_name or not region_slug or not host:
-        return {'statusCode': 400, 'body': 'missing region or host'}
+    logger.info(f'operation kino phase 2: scrape sessions begin <{region_name}>')
 
     try:
         dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
@@ -32,7 +38,7 @@ def lambda_handler(event, context):
         if not cinemas:
             return {
                 'statusCode': 500,
-                'body': 'skip scraping movies cos no existing cinemas in database',
+                'body': 'skip scrape sessions cos no existing cinemas in database',
             }
 
         region = Region(name=region_name, slug=region_slug)
@@ -40,7 +46,7 @@ def lambda_handler(event, context):
         if not movies:
             return {
                 'statusCode': 500,
-                'body': 'failed to scrape movies',
+                'body': 'failed to scrape sessions',
             }
 
         delete_count = delete_movies_by_region(movies_table, region_name)
@@ -48,15 +54,15 @@ def lambda_handler(event, context):
         insert_count = batch_insert_movies(movies_table, movies)
         logger.info(f'inserted {insert_count} movies <{region_name}>')
 
-        logger.info(f'operation kino phase 2: session scraper complete <{region_name}>')
+        logger.info(f'operation kino phase 2: scrape sessions complete <{region_name}>')
         return {'statusCode': 200}
     except (ClientError, BotoCoreError) as e:
         return {
             'statusCode': 500,
-            'body': f'session scraping successful but encountered dynamodb error: {e}',
+            'body': f'scrape sessions successful but encountered dynamodb error: {e}',
         }
     except Exception as e:
         return {
             'statusCode': 500,
-            'body': f'session scraper lambda encountered unexpected error: {e}',
+            'body': f'scrape sessions lambda encountered unexpected error: {e}',
         }
