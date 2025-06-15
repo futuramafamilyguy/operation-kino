@@ -7,8 +7,8 @@ from models.movie import Movie
 logger = logging.getLogger(__name__)
 
 
-def get_movies_by_region(table, region: str) -> list[Movie]:
-    items = _query_movie_items_by_region(table, region)
+def get_movies_by_region(table, region_code: str) -> list[Movie]:
+    items = _query_movie_items_by_region(table, region_code)
     return [Movie(**item) for item in items]
 
 
@@ -28,13 +28,15 @@ def batch_insert_movies(table, movies: list[Movie]) -> None:
         raise
 
 
-def delete_movies_by_region(table, region: str) -> int:
-    items = _query_movie_items_by_region(table, region)
+def delete_movies_by_region(table, region_code: str) -> int:
+    items = _query_movie_items_by_region(table, region_code)
     delete_count = 0
     try:
         with table.batch_writer() as batch:
             for item in items:
-                batch.delete_item(Key={'region': item['region'], 'id': item['id']})
+                batch.delete_item(
+                    Key={'region_code': item['region_code'], 'id': item['id']}
+                )
                 delete_count += 1
         return delete_count
     except (ClientError, BotoCoreError) as e:
@@ -42,9 +44,11 @@ def delete_movies_by_region(table, region: str) -> int:
         raise
 
 
-def _query_movie_items_by_region(table, region: str) -> list[dict]:
+def _query_movie_items_by_region(table, region_code: str) -> list[dict]:
     try:
-        response = table.query(KeyConditionExpression=Key('region').eq(region))
+        response = table.query(
+            KeyConditionExpression=Key('region_code').eq(region_code)
+        )
         return response.get('Items', [])
     except (ClientError, BotoCoreError) as e:
         logger.error(f'dynamodb error encountered while fetching movies: {e}')

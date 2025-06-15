@@ -27,14 +27,14 @@ def lambda_handler(event, context):
             'body': f'country code not supported: <{country_code}>',
         }
 
-    logger.info(f'operation kino phase 2: scrape sessions begin <{region_name}>')
+    logger.info(f'operation kino phase 2: scrape sessions begin <{region_slug}>')
 
     try:
         dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
 
         movies_table = dynamodb.Table('operation-kino_movies')
         cinemas_table = dynamodb.Table('operation-kino_cinemas')
-        cinemas = get_cinemas_by_region(cinemas_table, region_name)
+        cinemas = get_cinemas_by_region(cinemas_table, region_slug)
         if not cinemas:
             return {
                 'statusCode': 500,
@@ -50,11 +50,11 @@ def lambda_handler(event, context):
             }
 
         delete_count = delete_movies_by_region(movies_table, region_name)
-        logger.info(f'deleted {delete_count} movies <{region_name}>')
+        logger.info(f'deleted {delete_count} movies <{region_slug}>')
         insert_count = batch_insert_movies(movies_table, movies)
-        logger.info(f'inserted {insert_count} movies <{region_name}>')
+        logger.info(f'inserted {insert_count} movies <{region_slug}>')
 
-        logger.info(f'operation kino phase 2: scrape sessions complete <{region_name}>')
+        logger.info(f'operation kino phase 2: scrape sessions complete <{region_slug}>')
         return {'statusCode': 200}
     except (ClientError, BotoCoreError) as e:
         return {

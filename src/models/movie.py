@@ -10,5 +10,6 @@ class Movie(BaseModel):
     release_year: int
     image_url: Optional[HttpUrl]
     region: str
+    region_code: str
     cinemas: List[CinemaSummary]
     showtimes: List[str]

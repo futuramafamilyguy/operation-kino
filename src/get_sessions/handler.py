@@ -13,18 +13,18 @@ logger = logging.getLogger(__name__)
 
 
 def lambda_handler(event, context):
-    region_name = event.get('region_name')
+    region_code = event.get('region_code')
 
-    if not region_name:
+    if not region_code:
         return {'statusCode': 400, 'body': 'missing region'}
 
     try:
         dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
 
         movies_table = dynamodb.Table('operation-kino_movies')
-        sessions = get_movies_by_region(movies_table, region_name)
+        sessions = get_movies_by_region(movies_table, region_code)
         if not sessions:
-            logger.warning(f'no sessions found for <{region_name}>')
+            logger.warning(f'no sessions found for <{region_code}>')
 
         sessions_json = [
             json.loads(session.model_dump_json(exclude={'id', 'region'}))

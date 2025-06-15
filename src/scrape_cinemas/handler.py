@@ -30,7 +30,7 @@ def lambda_handler(event, context):
         }
 
     logger.info(
-        f'operation kino phase 1: scrape cinemas begin <{region_name}>. for king and country'
+        f'operation kino phase 1: scrape cinemas begin <{region_slug}>. for king and country'
     )
 
     try:
@@ -47,16 +47,16 @@ def lambda_handler(event, context):
 
         try:
             delete_count = delete_cinemas_by_region(cinemas_table, region_name)
-            logger.info(f'deleted {delete_count} cinemas <{region_name}>')
+            logger.info(f'deleted {delete_count} cinemas <{region_slug}>')
             insert_count = batch_insert_cinemas(cinemas_table, cinemas)
-            logger.info(f'inserted {insert_count} cinemas <{region_name}>')
+            logger.info(f'inserted {insert_count} cinemas <{region_slug}>')
         except (ClientError, BotoCoreError) as e:
             return {
                 'statusCode': 500,
                 'body': f'scrape cinemas successful but encountered dynamodb error: {e}',
             }
 
-        logger.info(f'operation kino phase 1: scrape cinemas complete <{region_name}>')
+        logger.info(f'operation kino phase 1: scrape cinemas complete <{region_slug}>')
 
         return {'statusCode': 200}
     except Exception as e:

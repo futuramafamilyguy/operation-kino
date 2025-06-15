@@ -102,6 +102,7 @@ async def scrape_sessions(
                     release_year=details['release_year'],
                     image_url=details['image_url'],
                     region=region.name,
+                    region_code=region.slug,
                     cinemas=venues,
                     showtimes=showtimes,
                 )

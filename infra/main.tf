@@ -22,11 +22,11 @@ resource "aws_dynamodb_table" "cinemas" {
   name         = "${local.application}_cinemas"
   billing_mode = "PAY_PER_REQUEST"
 
-  hash_key  = "region"
+  hash_key  = "region_code"
   range_key = "id"
 
   attribute {
-    name = "region"
+    name = "region_code"
     type = "S"
   }
 
@@ -40,11 +40,11 @@ resource "aws_dynamodb_table" "movies" {
   name         = "${local.application}_movies"
   billing_mode = "PAY_PER_REQUEST"
 
-  hash_key  = "region"
+  hash_key  = "region_code"
   range_key = "id"
 
   attribute {
-    name = "region"
+    name = "region_code"
     type = "S"
   }
 

@@ -27,22 +27,30 @@ def test_parse_cinema_listings_no_cinemas():
 def test_enrich_cinema_with_url():
     cinema_name = 'Maya Cinemas'
     cinema_region = 'Monterey County'
+    cinema_region_code = 'monterey-county'
     html = load_html_fixture('cinema_details.html')
 
-    cinema = _enrich_cinema_with_url(cinema_name, cinema_region, html)
+    cinema = _enrich_cinema_with_url(
+        cinema_name, cinema_region, cinema_region_code, html
+    )
 
     assert cinema.name == cinema_name
     assert cinema.homepage_url == HttpUrl('https://www.mayacinemas.com/salinas')
     assert cinema.region == cinema_region
+    assert cinema.region_code == cinema_region_code
 
 
 def test_enrich_cinema_with_url_no_url():
     cinema_name = 'Lighthouse Cinemas'
     cinema_region = 'Monterey County'
+    cinema_region_code = 'monterey-county'
     html = load_html_fixture('cinema_details_no_url.html')
 
-    cinema = _enrich_cinema_with_url(cinema_name, cinema_region, html)
+    cinema = _enrich_cinema_with_url(
+        cinema_name, cinema_region, cinema_region_code, html
+    )
 
     assert cinema.name == cinema_name
     assert cinema.homepage_url == None
     assert cinema.region == cinema_region
+    assert cinema.region_code == cinema_region_code

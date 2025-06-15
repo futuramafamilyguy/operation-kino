@@ -7,6 +7,7 @@ class Cinema(BaseModel):
     name: str
     homepage_url: Optional[HttpUrl]
     region: str
+    region_code: str
 
 
 class CinemaSummary(BaseModel):

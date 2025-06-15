@@ -45,7 +45,7 @@ async def scrape_cinemas(region: Region, host: str) -> list[Cinema]:
                     )
                     raise ScrapingException('cinema detail scraping failed')
                 return _enrich_cinema_with_url(
-                    cinema['name'], region.name, cinema_details_html
+                    cinema['name'], region.name, region.slug, cinema_details_html
                 )
             except ScrapingException:
                 logger.warning(
@@ -106,7 +106,9 @@ def _parse_cinema_listings(html: str) -> Iterator[dict]:
         yield {'name': cinema_name_element.text, 'slug': cinema_slug_parts[1]}
 
 
-def _enrich_cinema_with_url(cinema_name: str, region_name: str, html: str) -> Cinema:
+def _enrich_cinema_with_url(
+    cinema_name: str, region_name: str, region_slug: str, html: str
+) -> Cinema:
     cinema_details_soup = BeautifulSoup(html, 'lxml')
     cinema_details_element = cinema_details_soup.find(
         'ul', class_=CINEMA_DETAILS_CLASS_SELECTOR
@@ -135,5 +137,9 @@ def _enrich_cinema_with_url(cinema_name: str, region_name: str, html: str) -> Ci
         cinema_url = None
 
     return Cinema(
-        id=str(uuid4()), name=cinema_name, homepage_url=cinema_url, region=region_name
+        id=str(uuid4()),
+        name=cinema_name,
+        homepage_url=cinema_url,
+        region=region_name,
+        region_code=region_slug,
     )
