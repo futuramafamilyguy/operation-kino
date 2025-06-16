@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 def lambda_handler(event, context):
-    region_code = event.get('region_code')
+    region_code = event['pathParameters']['region_code']
 
     if not region_code:
         return {'statusCode': 400, 'body': 'missing region'}
@@ -34,7 +34,7 @@ def lambda_handler(event, context):
         return {
             'statusCode': 200,
             'headers': {'Content-Type': 'application/json'},
-            'body': {'sessions': sessions_json},
+            'body': json.dumps({'sessions': sessions_json}),
         }
     except Exception as e:
         return {
