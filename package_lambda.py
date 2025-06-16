@@ -25,14 +25,17 @@ def package_scraper_lambdas():
     requirements = BASE_DIR / 'requirements.txt'
     install_dependencies(requirements, temp_dir)
 
-    for item in os.listdir(SRC_DIR):
-        if item not in SCRAPER_LAMBDAS:
-            src = os.path.join(SRC_DIR, item)
-            if os.path.isdir(src):
-                dest = os.path.join(temp_dir, item)
-                shutil.copytree(src, dest, ignore=shutil.ignore_patterns('__pycache__'))
-            else:
-                shutil.copy(src, temp_dir)
+    to_copy = [
+        (SRC_DIR / 'common', temp_dir / 'common'),
+        (SRC_DIR / 'models', temp_dir / 'models'),
+        (SRC_DIR / 'repositories', temp_dir / 'repositories'),
+        (SRC_DIR / 'exceptions.py', temp_dir / 'exceptions.py'),
+    ]
+    for src, dest in to_copy:
+        if os.path.isdir(src):
+            shutil.copytree(src, dest, ignore=shutil.ignore_patterns('__pycache__'))
+        else:
+            shutil.copy(src, temp_dir)
 
     # packaging individual scraper lambdas
 
@@ -42,11 +45,9 @@ def package_scraper_lambdas():
         print(f'packaging {_lambda}')
 
         lambda_src = SRC_DIR / _lambda
-        shutil.copytree(
-            lambda_src,
-            temp_dir / _lambda,
-            ignore=shutil.ignore_patterns('__pycache__', 'handler.py'),
-        )
+        lambda_dest = temp_dir / _lambda
+        lambda_dest.mkdir(parents=True)
+        shutil.copy(lambda_src / 'scraper.py', lambda_dest / 'scraper.py')
         shutil.copy(lambda_src / 'handler.py', temp_dir / 'handler.py')
 
         BUILD_DIR.mkdir(exist_ok=True)
