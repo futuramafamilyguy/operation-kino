@@ -27,7 +27,7 @@ locals {
 resource "aws_cloudwatch_event_rule" "scrape_cinemas_cron" {
   for_each = local.regions
 
-  name                = "scrape_cinemas_cron_${each.key}"
+  name                = "${local.application}_scrape_cinemas_cron_${each.key}"
   schedule_expression = each.value.scrape_cinemas_cron
 }
 
@@ -35,7 +35,7 @@ resource "aws_cloudwatch_event_target" "scrape_cinemas_cron_job" {
   for_each = local.regions
 
   rule      = aws_cloudwatch_event_rule.scrape_cinemas_cron[each.key].name
-  target_id = "scrape_cinemas_cron_job_${each.key}"
+  target_id = "${local.application}_scrape_cinemas_cron_job_${each.key}"
   arn       = aws_lambda_function.scrape_cinemas.arn
 
   input = jsonencode({
@@ -48,7 +48,7 @@ resource "aws_cloudwatch_event_target" "scrape_cinemas_cron_job" {
 resource "aws_lambda_permission" "scrape_cinemas_allow_eventbridge" {
   for_each = local.regions
 
-  statement_id  = "AllowExecutionFromEventBridge_${each.key}"
+  statement_id  = "${local.application}_AllowExecutionFromEventBridge_${each.key}"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.scrape_cinemas.function_name
   principal     = "events.amazonaws.com"
@@ -58,7 +58,7 @@ resource "aws_lambda_permission" "scrape_cinemas_allow_eventbridge" {
 resource "aws_cloudwatch_event_rule" "scrape_sessions_cron" {
   for_each = local.regions
 
-  name                = "scrape_sessions_cron_${each.key}"
+  name                = "${local.application}_scrape_sessions_cron_${each.key}"
   schedule_expression = each.value.scrape_sessions_cron
 }
 
@@ -66,7 +66,7 @@ resource "aws_cloudwatch_event_target" "scrape_sessions_cron_job" {
   for_each = local.regions
 
   rule      = aws_cloudwatch_event_rule.scrape_sessions_cron[each.key].name
-  target_id = "scrape_sessions_cron_job_${each.key}"
+  target_id = "${local.application}_scrape_sessions_cron_job_${each.key}"
   arn       = aws_lambda_function.scrape_sessions.arn
 
   input = jsonencode({
@@ -79,7 +79,7 @@ resource "aws_cloudwatch_event_target" "scrape_sessions_cron_job" {
 resource "aws_lambda_permission" "scrape_sessions_allow_eventbridge" {
   for_each = local.regions
 
-  statement_id  = "AllowExecutionFromEventBridge_${each.key}"
+  statement_id  = "${local.application}_AllowExecutionFromEventBridge_${each.key}"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.scrape_sessions.function_name
   principal     = "events.amazonaws.com"

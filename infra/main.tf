@@ -13,6 +13,14 @@ provider "aws" {
   region = "ap-southeast-2"
 }
 
+variable "scrape_host_nz" {
+  type = string
+}
+
+variable "scrape_host_au" {
+  type = string
+}
+
 locals {
   application      = "operation-kino"
   artifacts_bucket = "allenmaygibson-artifacts"
