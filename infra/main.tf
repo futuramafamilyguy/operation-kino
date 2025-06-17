@@ -6,6 +6,12 @@ terraform {
     }
   }
 
+  backend "s3" {
+    bucket = "allenmaygibson-tf-state"
+    key    = "operation-kino/terraform.tfstate"
+    region = "ap-southeast-2"
+  }
+
   required_version = ">= 1.12.0, < 2.0.0"
 }
 
