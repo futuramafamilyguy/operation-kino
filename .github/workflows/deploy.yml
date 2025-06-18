@@ -5,6 +5,7 @@ on:
 
 env:
   APP: 'operation-kino'
+  AWS_REGION: 'ap-southeast-2'
   S3_BUCKET: 'allenmaygibson-artifacts'
 
 permissions:
@@ -31,10 +32,32 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::025066267460:role/allenmaygibson-github-actions
-          aws-region: ap-southeast-2
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: upload lambda packages to s3
         run: |
           aws s3 cp build/scrape_cinemas.zip s3://${{ env.S3_BUCKET }}/${{ env.APP }}/scrape_cinemas.zip
           aws s3 cp build/scrape_sessions.zip s3://${{ env.S3_BUCKET }}/${{ env.APP }}/scrape_sessions.zip
           aws s3 cp build/get_sessions.zip s3://${{ env.S3_BUCKET }}/${{ env.APP }}/get_sessions.zip
+
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v4
+
+      - name: configure aws creds
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::025066267460:role/allenmaygibson-github-actions
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: tf init
+        run: terraform init
+
+      - name: tf apply
+        run: |
+          terraform apply -auto-approve \
+            -var="scrape_host_nz=${{ secrets.SCRAPE_HOST_NZ }}"
+            -var="scrape_host_au=${{ secrets.SCRAPE_HOST_AU }}"      
