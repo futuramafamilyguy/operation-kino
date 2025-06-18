@@ -1,7 +1,15 @@
-name: build and deploy operation-kino
+name: deploy operation-kino
 
 on:
   workflow_dispatch:
+
+env:
+  APP: 'operation-kino'
+  S3_BUCKET: 'allenmaygibson-artifacts'
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   package:
@@ -19,6 +27,14 @@ jobs:
       - name: package lambdas
         run: python package_lambda.py
 
-      - name: show build content
-        run: ls -R build/
-        
+      - name: configure aws creds
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::025066267460:role/allenmaygibson-github-actions
+          aws-region: ap-southeast-2
+
+      - name: upload lambda packages to s3
+        run: |
+          aws s3 cp build/scrape_cinemas.zip s3://${{ env.S3_BUCKET }}/${{ env.APP }}/scrape_cinemas.zip
+          aws s3 cp build/scrape_sessions.zip s3://${{ env.S3_BUCKET }}/${{ env.APP }}/scrape_sessions.zip
+          aws s3 cp build/get_sessions.zip s3://${{ env.S3_BUCKET }}/${{ env.APP }}/get_sessions.zip
