@@ -26,9 +26,9 @@ def package_scraper_lambdas():
     install_dependencies(requirements, temp_dir)
 
     to_copy = [
-        (SRC_DIR / 'common', temp_dir / 'common'),
         (SRC_DIR / 'models', temp_dir / 'models'),
         (SRC_DIR / 'repositories', temp_dir / 'repositories'),
+        (SRC_DIR / 'web_utils.py', temp_dir / 'web_utils.py'),
         (SRC_DIR / 'exceptions.py', temp_dir / 'exceptions.py'),
     ]
     for src, dest in to_copy:

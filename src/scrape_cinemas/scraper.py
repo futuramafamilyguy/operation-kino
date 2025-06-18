@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 from uuid import uuid4
 import validators
 
-from common import web_utils
+from . import web_utils
 from exceptions import ScrapingException
 from models.cinema import Cinema
 from models.region import Region

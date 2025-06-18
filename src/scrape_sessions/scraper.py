@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup
 from pydantic import HttpUrl
 from exceptions import ScrapingException
 from models.cinema import Cinema, CinemaSummary
-from common import web_utils
+from . import web_utils
 from models.region import Region
 from models.movie import Movie
 
