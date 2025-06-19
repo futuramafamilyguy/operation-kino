@@ -46,7 +46,7 @@ def lambda_handler(event, context):
             }
 
         try:
-            delete_count = delete_cinemas_by_region(cinemas_table, region_name)
+            delete_count = delete_cinemas_by_region(cinemas_table, region_slug)
             logger.info(f'deleted {delete_count} cinemas <{region_slug}>')
             insert_count = batch_insert_cinemas(cinemas_table, cinemas)
             logger.info(f'inserted {insert_count} cinemas <{region_slug}>')

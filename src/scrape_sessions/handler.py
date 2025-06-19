@@ -49,7 +49,7 @@ def lambda_handler(event, context):
                 'body': 'failed to scrape sessions',
             }
 
-        delete_count = delete_movies_by_region(movies_table, region_name)
+        delete_count = delete_movies_by_region(movies_table, region_slug)
         logger.info(f'deleted {delete_count} movies <{region_slug}>')
         insert_count = batch_insert_movies(movies_table, movies)
         logger.info(f'inserted {insert_count} movies <{region_slug}>')
