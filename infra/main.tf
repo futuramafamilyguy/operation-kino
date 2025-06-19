@@ -126,9 +126,7 @@ resource "aws_lambda_function" "scrape_cinemas" {
   memory_size = 256
   timeout     = 30
 
-  s3_bucket = local.artifacts_bucket
-  s3_key    = "${local.application}/scrape_cinemas.zip"
-
+  filename         = "${path.module}/../build/scrape_cinemas.zip"
   source_code_hash = filebase64sha256("../build/scrape_cinemas.zip")
 
   environment {
@@ -148,9 +146,7 @@ resource "aws_lambda_function" "scrape_sessions" {
   memory_size = 512
   timeout     = 60
 
-  s3_bucket = local.artifacts_bucket
-  s3_key    = "${local.application}/scrape_sessions.zip"
-
+  filename         = "${path.module}/../build/scrape_sessions.zip"
   source_code_hash = filebase64sha256("../build/scrape_sessions.zip")
 
   environment {
@@ -170,8 +166,6 @@ resource "aws_lambda_function" "get_sessions" {
   memory_size = 128
   timeout     = 15
 
-  s3_bucket = local.artifacts_bucket
-  s3_key    = "${local.application}/get_sessions.zip"
-
+  filename         = "${path.module}/../build/get_sessions.zip"
   source_code_hash = filebase64sha256("../build/get_sessions.zip")
 }
