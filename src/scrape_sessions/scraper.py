@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup
 from pydantic import HttpUrl
 from exceptions import ScrapingException
 from models.cinema import Cinema, CinemaSummary
-from web_utils import build_html_section_extractor, fetch_html, stream_html
+from web_utils import fetch_html, fetch_html_section
 from models.region import Region
 from models.movie import Movie
 
@@ -34,7 +34,7 @@ MOVIE_SHOWTIME_MONTH_SELECTOR = 'times-calendar__el__month'
 # movie bookings page
 MOVIE_VENUES_SELECTOR = 'movie-times__cinema__copy'
 
-# no need to stream showtime and vanue pages since they are much smaller
+# no need to stream showtime and venue pages since they are much smaller
 MOVIES_START = '<div class="container__outer playing-now playing-now--sliders">'
 MOVIES_END = (
     '<div id="genre-modal class="modal modal--v5 modal--genre modal--opacity js-modal">'
@@ -50,15 +50,8 @@ async def scrape_sessions(
 ) -> list[Movie] | None:
     async with aiohttp.ClientSession() as http_session:
         now_showing_url = MOVIES_URL_TEMPLATE.format(host=host, region_slug=region.slug)
-        now_showing_html_buffer = []
-        now_showing_html_extractor = build_html_section_extractor(
-            MOVIES_START, MOVIES_END, now_showing_html_buffer
-        )
-        await stream_html(
-            http_session, now_showing_url, process_chunk=now_showing_html_extractor
-        )
-        now_showing_html = b''.join(now_showing_html_buffer).decode(
-            'utf-8', errors='ignore'
+        now_showing_html = await fetch_html_section(
+            http_session, now_showing_url, MOVIES_START, MOVIES_END
         )
         if now_showing_html is None:
             logger.error(f'{now_showing_url} did not return anything')
@@ -68,17 +61,8 @@ async def scrape_sessions(
             movie_details_url = MOVIE_DETAILS_URL_TEMPLATE.format(
                 host=host, movie_slug=movie_slug
             )
-            movie_details_html_buffer = []
-            movie_details_html_extractor = build_html_section_extractor(
-                MOVIE_DETAILS_START, MOVIE_DETAILS_END, movie_details_html_buffer
-            )
-            await stream_html(
-                http_session,
-                movie_details_url,
-                process_chunk=movie_details_html_extractor,
-            )
-            movie_details_html = b''.join(movie_details_html_buffer).decode(
-                'utf-8', errors='ignore'
+            movie_details_html = await fetch_html_section(
+                http_session, movie_details_url, MOVIE_DETAILS_START, MOVIE_DETAILS_END
             )
             return _parse_movie_details(movie_details_html)
 

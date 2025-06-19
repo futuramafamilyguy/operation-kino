@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 from uuid import uuid4
 import validators
 
-from web_utils import build_html_section_extractor, stream_html
+from web_utils import fetch_html_section
 from exceptions import ScrapingException
 from models.cinema import Cinema
 from models.region import Region
@@ -31,12 +31,9 @@ logger = logging.getLogger(__name__)
 async def scrape_cinemas(region: Region, host: str) -> list[Cinema]:
     async with aiohttp.ClientSession() as session:
         cinemas_url = CINEMAS_URL_TEMPLATE.format(host=host, region_slug=region.slug)
-        cinemas_html_buffer = []
-        cinemas_html_extractor = build_html_section_extractor(
-            CINEMAS_START, CINEMAS_END, cinemas_html_buffer
+        cinemas_html = await fetch_html_section(
+            session, cinemas_url, CINEMAS_START, CINEMAS_END
         )
-        await stream_html(session, cinemas_url, process_chunk=cinemas_html_extractor)
-        cinemas_html = b''.join(cinemas_html_buffer).decode('utf-8', errors='ignore')
         if cinemas_html is None:
             logger.error(f'{cinemas_url} did not return anything')
             return []
@@ -45,15 +42,8 @@ async def scrape_cinemas(region: Region, host: str) -> list[Cinema]:
             cinema_details_url = CINEMA_DETAILS_URL_TEMPLATE.format(
                 host=host, cinema_slug=cinema['slug']
             )
-            cinema_details_html_buffer = []
-            cinema_details_html_extractor = build_html_section_extractor(
-                CINEMA_DETAILS_START, CINEMA_DETAILS_END, cinema_details_html_buffer
-            )
-            await stream_html(
-                session, cinema_details_url, process_chunk=cinema_details_html_extractor
-            )
-            cinema_details_html = b''.join(cinema_details_html_buffer).decode(
-                'utf-8', errors='ignore'
+            cinema_details_html = await fetch_html_section(
+                session, cinema_details_url, CINEMA_DETAILS_START, CINEMA_DETAILS_END
             )
             try:
                 if cinema_details_html is None:

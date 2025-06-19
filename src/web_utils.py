@@ -57,7 +57,22 @@ async def stream_html(
                 return False
 
 
-def build_html_section_extractor(
+async def fetch_html_section(
+    session: aiohttp.ClientSession,
+    url: str,
+    html_section_start: str,
+    html_section_end: str,
+):
+    html_buffer = []
+    html_extractor = _build_html_section_extractor(
+        html_section_start, html_section_end, html_buffer
+    )
+    await stream_html(session, url, process_chunk=html_extractor)
+
+    return b''.join(html_buffer).decode('utf-8', errors='ignore')
+
+
+def _build_html_section_extractor(
     start_marker: str, end_marker: str, buffer: list[bytes]
 ) -> Callable[[bytes], bool]:
     inside_target = False
