@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 from uuid import uuid4
 import validators
 
-from web_utils import fetch_html
+from web_utils import build_html_section_extractor, stream_html
 from exceptions import ScrapingException
 from models.cinema import Cinema
 from models.region import Region
@@ -20,13 +20,23 @@ CINEMA_CLASS_SELECTOR = 'more-cinemas__link'
 CINEMA_TITLE_CLASS_SELECTOR = 'more-cinemas__title'
 CINEMA_DETAILS_CLASS_SELECTOR = 'cinema-info__block'
 
+CINEMAS_START = 'all-cinemas-list js-add-cinema-to-fav-wrapper'
+CINEMAS_END = 'mega-divider'
+CINEMA_DETAILS_START = '<div class="mega-divider"></div>'
+CINEMA_DETAILS_END = '<div class="cinemas-background-gray">'
+
 logger = logging.getLogger(__name__)
 
 
 async def scrape_cinemas(region: Region, host: str) -> list[Cinema]:
     async with aiohttp.ClientSession() as session:
         cinemas_url = CINEMAS_URL_TEMPLATE.format(host=host, region_slug=region.slug)
-        cinemas_html = await fetch_html(session, cinemas_url)
+        cinemas_html_buffer = []
+        cinemas_html_extractor = build_html_section_extractor(
+            CINEMAS_START, CINEMAS_END, cinemas_html_buffer
+        )
+        await stream_html(session, cinemas_url, process_chunk=cinemas_html_extractor)
+        cinemas_html = b''.join(cinemas_html_buffer).decode('utf-8', errors='ignore')
         if cinemas_html is None:
             logger.error(f'{cinemas_url} did not return anything')
             return []
@@ -35,7 +45,16 @@ async def scrape_cinemas(region: Region, host: str) -> list[Cinema]:
             cinema_details_url = CINEMA_DETAILS_URL_TEMPLATE.format(
                 host=host, cinema_slug=cinema['slug']
             )
-            cinema_details_html = await fetch_html(session, cinema_details_url)
+            cinema_details_html_buffer = []
+            cinema_details_html_extractor = build_html_section_extractor(
+                CINEMA_DETAILS_START, CINEMA_DETAILS_END, cinema_details_html_buffer
+            )
+            await stream_html(
+                session, cinema_details_url, process_chunk=cinema_details_html_extractor
+            )
+            cinema_details_html = b''.join(cinema_details_html_buffer).decode(
+                'utf-8', errors='ignore'
+            )
             try:
                 if cinema_details_html is None:
                     logger.error(
@@ -115,7 +134,7 @@ def _enrich_cinema_with_url(
         logger.error(
             f'could not find <ul.{CINEMA_DETAILS_CLASS_SELECTOR}> for {cinema_name} cinema details in cinema details page:'
         )
-        logger.debug(f'cinema details page: {cinema_details_soup}')
+        logger.debug(f'cinema details page: {html}')
         raise ScrapingException('cinema detail scraping failed')
 
     cinema_url_element = cinema_details_element.find('a')

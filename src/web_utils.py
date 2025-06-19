@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Optional
+from typing import Awaitable, Callable, Optional
 import aiohttp
 
 
@@ -27,3 +27,59 @@ async def fetch_html(
             else:
                 logger.error(f'all attempts failed at {url}: {e}')
                 return None
+
+
+async def stream_html(
+    session: aiohttp.ClientSession,
+    url: str,
+    process_chunk: Callable[[bytes], Awaitable[bool]],
+    headers: dict = None,
+    timeout: int = 10,
+) -> bool:
+    for attempt in range(RETRY_COUNT + 1):
+        try:
+            async with session.get(
+                url,
+                headers=headers or {},
+                timeout=aiohttp.ClientTimeout(total=timeout),
+            ) as response:
+                response.raise_for_status()
+                async for chunk in response.content.iter_chunked(2048):
+                    if await process_chunk(chunk):
+                        break
+                return True
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            if attempt < RETRY_COUNT:
+                logger.warning(f'[attempt {attempt}] failed to fetch at {url}: {e}')
+                await asyncio.sleep(DELAY_DURATION)
+            else:
+                logger.error(f'all attempts failed at {url}: {e}')
+                return False
+
+
+def build_html_section_extractor(
+    start_marker: str, end_marker: str, buffer: list[bytes]
+) -> Callable[[bytes], bool]:
+    inside_target = False
+
+    async def _extract_html_section(chunk: bytes) -> bool:
+        nonlocal inside_target
+
+        text = chunk.decode('utf-8', errors='ignore')
+
+        if not inside_target:
+            start_idx = text.find(start_marker)
+            if start_idx != -1:
+                inside_target = True
+                buffer.append(text[start_idx:].encode())
+            return False
+
+        end_idx = text.find(end_marker)
+        if end_idx != -1:
+            buffer.append(text[:end_idx].encode())
+            return True
+
+        buffer.append(chunk)
+        return False
+
+    return _extract_html_section
