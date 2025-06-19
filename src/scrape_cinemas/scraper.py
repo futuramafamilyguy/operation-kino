@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 from uuid import uuid4
 import validators
 
-from . import web_utils
+from web_utils import fetch_html
 from exceptions import ScrapingException
 from models.cinema import Cinema
 from models.region import Region
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 async def scrape_cinemas(region: Region, host: str) -> list[Cinema]:
     async with aiohttp.ClientSession() as session:
         cinemas_url = CINEMAS_URL_TEMPLATE.format(host=host, region_slug=region.slug)
-        cinemas_html = await web_utils.fetch_html(session, cinemas_url)
+        cinemas_html = await fetch_html(session, cinemas_url)
         if cinemas_html is None:
             logger.error(f'{cinemas_url} did not return anything')
             return []
@@ -35,9 +35,7 @@ async def scrape_cinemas(region: Region, host: str) -> list[Cinema]:
             cinema_details_url = CINEMA_DETAILS_URL_TEMPLATE.format(
                 host=host, cinema_slug=cinema['slug']
             )
-            cinema_details_html = await web_utils.fetch_html(
-                session, cinema_details_url
-            )
+            cinema_details_html = await fetch_html(session, cinema_details_url)
             try:
                 if cinema_details_html is None:
                     logger.error(

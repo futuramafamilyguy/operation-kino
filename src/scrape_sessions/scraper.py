@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup
 from pydantic import HttpUrl
 from exceptions import ScrapingException
 from models.cinema import Cinema, CinemaSummary
-from . import web_utils
+from web_utils import fetch_html
 from models.region import Region
 from models.movie import Movie
 
@@ -42,9 +42,7 @@ async def scrape_sessions(
 ) -> list[Movie] | None:
     async with aiohttp.ClientSession() as http_session:
         now_showing_url = MOVIES_URL_TEMPLATE.format(host=host, region_slug=region.slug)
-        now_showing_html = await web_utils.fetch_html(
-            session=http_session, url=now_showing_url
-        )
+        now_showing_html = await fetch_html(session=http_session, url=now_showing_url)
         if now_showing_html is None:
             logger.error(f'{now_showing_url} did not return anything')
             return None
@@ -53,7 +51,7 @@ async def scrape_sessions(
             movie_details_url = MOVIE_DETAILS_URL_TEMPLATE.format(
                 host=host, movie_slug=movie_slug
             )
-            movie_details_html = await web_utils.fetch_html(
+            movie_details_html = await fetch_html(
                 session=http_session, url=movie_details_url
             )
             return _parse_movie_details(movie_details_html)
@@ -62,7 +60,7 @@ async def scrape_sessions(
             movie_showtimes_url = MOVIE_SHOWTIMES_URL_TEMPLATE.format(
                 host=host, movie_slug=movie_slug, region_slug=region.slug
             )
-            movie_showtimes_html = await web_utils.fetch_html(
+            movie_showtimes_html = await fetch_html(
                 session=http_session, url=movie_showtimes_url
             )
             return _parse_movie_showtimes(movie_showtimes_html)
@@ -71,7 +69,7 @@ async def scrape_sessions(
             movie_venues_url = MOVIE_VENUES_URL_TEMPLATE.format(
                 host=host, movie_slug=movie_slug, showtime=showtime
             )
-            movie_venues_html = await web_utils.fetch_html(
+            movie_venues_html = await fetch_html(
                 session=http_session, url=movie_venues_url
             )
             cinemas_map = {cinema.name: cinema.homepage_url for cinema in cinemas}
