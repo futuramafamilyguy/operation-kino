@@ -11,7 +11,7 @@ from scrape_cinemas.scraper import scrape_cinemas
 from models.region import Region
 
 LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()
-logging.basicConfig(level=LOG_LEVEL)
+logging.getLogger().setLevel(LOG_LEVEL)
 logger = logging.getLogger(__name__)
 
 

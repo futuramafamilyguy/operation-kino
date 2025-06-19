@@ -9,7 +9,7 @@ from repositories.movie_repository import batch_insert_movies, delete_movies_by_
 from scrape_sessions.scraper import scrape_sessions
 
 LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()
-logging.basicConfig(level=LOG_LEVEL)
+logging.getLogger().setLevel(LOG_LEVEL)
 logger = logging.getLogger(__name__)
 
 
