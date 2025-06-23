@@ -6,7 +6,6 @@ on:
 env:
   APP: 'operation-kino'
   AWS_REGION: 'ap-southeast-2'
-  S3_BUCKET: 'allenmaygibson-artifacts'
 
 permissions:
   id-token: write

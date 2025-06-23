@@ -32,5 +32,6 @@ resource "aws_lambda_permission" "allow_api_gateway" {
 }
 
 output "api_base_url" {
-  value = aws_apigatewayv2_api.http.api_endpoint
+  value     = aws_apigatewayv2_api.http.api_endpoint
+  sensitive = true
 }
