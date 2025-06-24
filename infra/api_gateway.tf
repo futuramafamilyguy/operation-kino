@@ -1,6 +1,13 @@
 resource "aws_apigatewayv2_api" "http" {
   name          = "${local.application}_http"
   protocol_type = "HTTP"
+
+  cors_configuration {
+    allow_origins     = ["https://allenmaygibson.com", "https://www.allenmaygibson.com"]
+    allow_methods     = ["GET", "OPTIONS"]
+    allow_headers     = ["Content-Type"]
+    allow_credentials = true
+  }
 }
 
 resource "aws_apigatewayv2_integration" "lambda" {
