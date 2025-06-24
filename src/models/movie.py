@@ -1,7 +1,7 @@
 from typing import List, Optional
 from pydantic import BaseModel, HttpUrl
 
-from models.cinema import CinemaSummary
+from models.cinema import CinemaSummary, to_camel
 
 
 class Movie(BaseModel):
@@ -13,3 +13,7 @@ class Movie(BaseModel):
     region_code: str
     cinemas: List[CinemaSummary]
     showtimes: List[str]
+
+    class Config:
+        alias_generator = to_camel
+        populate_by_name = True
