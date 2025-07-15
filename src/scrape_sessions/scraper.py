@@ -15,7 +15,7 @@ from models.region import Region
 from models.movie import Movie
 
 MOVIES_URL_TEMPLATE = '{host}/now-playing/{region_slug}'
-MOVIE_DETAILS_URL_TEMPLATE = '{host}/movie/{movie_slug}'
+MOVIE_DETAILS_URL_TEMPLATE = '{host}/movie/{movie_slug}/'
 MOVIE_SHOWTIMES_URL_TEMPLATE = '{host}/movie/times/{movie_slug}/{region_slug}'
 MOVIE_VENUES_URL_TEMPLATE = '{host}/movie/sessions/{movie_slug}/{showtime}/region/'
 
@@ -54,7 +54,9 @@ async def scrape_sessions(
             http_session, now_showing_url, MOVIES_START, MOVIES_END
         )
         if now_showing_html is None:
-            logger.error(f'{now_showing_url} did not return anything')
+            logger.error(
+                f'fetching now showing movies html returned null: {now_showing_html}'
+            )
             return None
 
         async def _fetch_movie_details(movie_slug: str) -> dict:
@@ -73,6 +75,11 @@ async def scrape_sessions(
             movie_showtimes_html = await fetch_html(
                 session=http_session, url=movie_showtimes_url
             )
+            if movie_showtimes_html is None:
+                raise ScrapingException(
+                    f'fetching movie showtimes html returned null: {movie_showtimes_html}'
+                )
+
             return _parse_movie_showtimes(movie_showtimes_html)
 
         async def _fetch_movie_venues(movie_slug: str, showtime: str) -> list[str]:
@@ -82,6 +89,11 @@ async def scrape_sessions(
             movie_venues_html = await fetch_html(
                 session=http_session, url=movie_venues_url
             )
+            if movie_venues_html is None:
+                raise ScrapingException(
+                    f'fetching movie venues html returned null: {movie_venues_url}'
+                )
+
             cinemas_map = {cinema.name: cinema.homepage_url for cinema in cinemas}
             return _parse_movie_venues(movie_venues_html, cinemas_map)
 
@@ -258,8 +270,13 @@ def _parse_movie_venues(
                 f'could not find <h4> for movie venue name in: {venue_element}'
             )
             continue
+
         venue_name = venue_name_h4.text
-        venue_homepage_url = cinemas[venue_name]
+        if venue_name not in cinemas:
+            logger.warning(f'vanue not found in cinema table: {venue_name}')
+            continue
+        venue_homepage_url = cinemas.get(venue_name)
+
         venues.append(
             CinemaSummary(
                 name=venue_name,
