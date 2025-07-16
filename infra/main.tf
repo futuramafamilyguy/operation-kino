@@ -87,6 +87,7 @@ data "aws_iam_policy_document" "dynamodb_access_policy" {
     resources = [
       aws_dynamodb_table.cinemas.arn,
       aws_dynamodb_table.movies.arn,
+      "${aws_dynamodb_table.movies.arn}/index/region_by_last_showtime",
     ]
 
     actions = [
