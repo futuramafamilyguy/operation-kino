@@ -1,4 +1,7 @@
+from datetime import datetime
 import logging
+from typing import Optional
+from zoneinfo import ZoneInfo
 from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError, BotoCoreError
 
@@ -7,8 +10,10 @@ from models.movie import Movie
 logger = logging.getLogger(__name__)
 
 
-def get_movies_by_region(table, region_code: str) -> list[Movie]:
-    items = _query_movie_items_by_region(table, region_code)
+def get_movies_by_region(table, region_code: str, timezone: str) -> list[Movie]:
+    items = _query_movie_items_by_region(
+        table, region_code, apply_date_filter=True, timezone=timezone
+    )
     return [Movie(**item) for item in items]
 
 
@@ -44,11 +49,26 @@ def delete_movies_by_region(table, region_code: str) -> int:
         raise
 
 
-def _query_movie_items_by_region(table, region_code: str) -> list[dict]:
+def _query_movie_items_by_region(
+    table,
+    region_code: str,
+    apply_date_filter: bool = False,
+    timezone: Optional[str] = None,
+) -> list[dict]:
     try:
-        response = table.query(
-            KeyConditionExpression=Key('region_code').eq(region_code)
-        )
+        key_condition = Key('region_code').eq(region_code)
+        if apply_date_filter:
+            key_condition &= Key('last_showtime').gte(
+                datetime.now(ZoneInfo(timezone)).date().isoformat()
+            )
+            response = table.query(
+                IndexName='region_by_last_showtime',
+                KeyConditionExpression=key_condition,
+            )
+        else:
+            response = table.query(
+                KeyConditionExpression=key_condition,
+            )
         return response.get('Items', [])
     except (ClientError, BotoCoreError) as e:
         logger.error(f'dynamodb error encountered while fetching movies: {e}')

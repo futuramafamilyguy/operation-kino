@@ -13,6 +13,7 @@ class Movie(BaseModel):
     region_code: str
     cinemas: List[CinemaSummary]
     showtimes: List[str]
+    last_showtime: str
 
     class Config:
         alias_generator = to_camel

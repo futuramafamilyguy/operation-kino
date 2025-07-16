@@ -66,6 +66,18 @@ resource "aws_dynamodb_table" "movies" {
     name = "id"
     type = "S"
   }
+
+  attribute {
+    name = "last_showtime"
+    type = "S"
+  }
+
+  global_secondary_index {
+    name            = "region_by_last_showtime"
+    hash_key        = "region_code"
+    range_key       = "last_showtime"
+    projection_type = "ALL"
+  }
 }
 
 data "aws_iam_policy_document" "dynamodb_access_policy" {

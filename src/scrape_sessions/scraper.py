@@ -125,6 +125,7 @@ async def scrape_sessions(
                     region_code=region.slug,
                     cinemas=venues,
                     showtimes=showtimes,
+                    last_showtime=showtimes[-1],
                 )
             except ScrapingException:
                 logger.warning(
