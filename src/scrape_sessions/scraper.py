@@ -274,8 +274,13 @@ def _parse_movie_venues(
 
         venue_name = venue_name_h4.text
         if venue_name not in cinemas:
-            logger.warning(f'vanue not found in cinema table: {venue_name}')
-            continue
+            unparsed_venue_name = venue_name
+            venue_name = _clean_cinema_name(venue_name)
+            if venue_name not in cinemas:
+                logger.warning(
+                    f'venue not found in cinema table: {unparsed_venue_name}'
+                )
+                continue
         venue_homepage_url = cinemas.get(venue_name)
 
         venues.append(
@@ -293,6 +298,11 @@ def _parse_movie_venues(
 def _clean_movie_title(title: str) -> str:
     # removes trailing year from some movies eg. (2014), (2014-15)
     return re.sub(r'\s*\((\d{4}(?:-\d{2,4})?)\)$', '', title)
+
+
+def _clean_cinema_name(name: str) -> str:
+    # removes trailing paren from cinema name
+    return re.sub(r'\s*\(.*\)$', '', name)
 
 
 def _parse_date(day: str, month: str, now: date) -> str:
